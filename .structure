@@ -1,0 +1,15 @@
+my-express-app/
+├── node_modules/
+├── src/                   # All source code goes here
+│   ├── config/            
+│   │   └── db.js          # Database connection logic
+│   ├── models/            
+│   │   ├── User.js        # Schemas & Models (e.g., User, Product)
+│   │   └── Post.js
+│   ├── controllers/       # Business logic (handling requests)
+│   ├── routes/            # Route definitions
+│   ├── middleware/        # Auth, error handling, etc.
+├── .env                   # Environment variables (DB URI, Secrets)
+├── .gitignore
+├── package.json
+└── index.js              # Entry point to start the server
