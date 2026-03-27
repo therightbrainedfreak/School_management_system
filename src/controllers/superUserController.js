@@ -1,12 +1,12 @@
 import 'dotenv/config'
-import { logger } from '../utils/logger.js';
+import { logger, saveAuditLog } from '../utils/logger.js';
 import { generateNewUserNotification } from '../utils/mailNotificationService.js';
 
 import admin from '../models/admin.js';
 import student from '../models/student.js';
 import teacher from '../models/teacher.js';
 import parent from '../models/parent.js';
-import backoffice from '../models/backoffice.js'
+import backoffice from '../models/backoffice.js';
 
 const modelRoleMap = {
     admin: admin,
@@ -48,7 +48,7 @@ export const createUser = async (req, res) => {
             status: 400,
             error: {
                 code: "INCOMPLETE_DATA",
-                message: "User role is required to create a user."
+                message: "Firstly User role must be provided to create user."
             },
             metadata: {
                 server_time: Date.now(),
@@ -179,17 +179,97 @@ export const createUser = async (req, res) => {
     };
 };
 
-export const deactivateAdmin = async (req, res) => {
-    // Extract data from request payload.
-    const { adminId, reason } = req.body || {};
-    // Id is required it cannot be empty.
-    if (!adminId) {
+const accountActions = {
+    ACTIVATE: async ( user, reason, referrerObj ) => {
+        user.status = 'active';
+        user.deactivationR = reason;
+        saveAuditLog({
+            targetId: user.userId,
+            onModel: user.role,
+            performedBy: referrerObj.performedBy,
+            performerModel: referrerObj.performerModel,
+            action: "ACTIVATE",
+            reason: reason
+        })
+        return user.save();
+    },
+    DEACTIVATE: async ( user, reason, referrerObj ) => {
+        user.status = 'deactivated';
+        user.deactivationR = reason;
+        saveAuditLog({
+            targetId: user.userId,
+            onModel: user.role,
+            performedBy: referrerObj.performedBy,
+            performerModel: referrerObj.performerModel,
+            action: "DEACTIVATE",
+            reason: reason
+        })
+        return user.save();
+    },
+    SUSPEND: async ( user, reason, referrerObj ) => {
+        user.status = 'suspended';
+        user.deactivationR = reason;
+        saveAuditLog({
+            targetId: user.userId,
+            onModel: user.role,
+            performedBy: referrerObj.performedBy,
+            performerModel: referrerObj.performerModel,
+            action: "SUSPEND",
+            reason: reason
+        })
+        return user.save();
+    },
+    DROP: async ( user, reason, referrerObj ) => {
+        user.status = 'drop';
+        user.deactivationR = reason;
+        saveAuditLog({
+            targetId: user.userId,
+            onModel: user.role,
+            performedBy: referrerObj.performedBy,
+            performerModel: referrerObj.performerModel,
+            action: "DROP",
+            reason: reason
+        })
+        return user.save();
+    }
+};
+
+export const handleAccountActions = async ( req, res ) => {
+    // Extract action performer details.
+    // Create referrer object for audit logs.
+    const referrerObj = {
+        performedBy: req.user?.id,
+        performerModel: req.user?.role
+    };
+    // Extract data from the request.
+    const { action, reason, role } = req.body || {};
+    // check if the required fields are provided.
+    if ( !action || !reason || !role ) {
         return res.status(400).json({
             success: false,
             status: 400,
             error: {
                 code: "INCOMPLETE_DATA",
-                message: "Details to deactivate admin required."
+                message: "The action, user role and reason must be specified."
+            },
+            metadata: {
+                server_time: Date.now(),
+                version: "v1.0.0"
+            }
+        });
+    }
+    // Extract the user_id from the url parameters.
+    const user_id = req.params.userId;
+    // Map the action.
+    const executeAction = accountActions[action.toUpperCase()];
+    // Check if the action is valid or not.
+    if ( !executeAction ) {
+        return res.status(400).json({
+            success: false,
+            status: 400,
+            error: {
+                code: "INVALID_ACTION",
+                message: "The specified action is not available."
             },
             metadata: {
                 server_time: Date.now(),
@@ -197,14 +277,28 @@ export const deactivateAdmin = async (req, res) => {
             }
         });
     };
-    const data = {
-        status: 'deactivated',
-        deactivationR: reason || 'unspecified'
-    }
+    // Map user role to the specific schema.
+    const MODEL = modelRoleMap[role];
+    // Check if the role is valid or not.
+    if (!MODEL) {
+        return res.status(400).json({
+            success: false,
+            status: 400,
+            error: {
+                code: "INVALID_ROLE_MAP",
+                message: "Provided role is invalid."
+            },
+            metadata: {
+                server_time: Date.now(),
+                version: "v1.0.0"
+            }
+        });
+    };
+    // Start performing action.
     try {
-        // Set status to deactivated in database.
-        const deactivatedUser = await admin.findOneAndUpdate({ userId: adminId }, { $set: data });
-        if (!deactivatedUser) {
+        const user = await MODEL.findOne({userId: user_id});
+        // Check if the user exists in the database.
+        if (!user) {
             return res.status(404).json({
                 success: false,
                 status: 404,
@@ -218,25 +312,17 @@ export const deactivateAdmin = async (req, res) => {
                 }
             });
         };
-        logger({
-            level: 'info',
-            origin: 'mainService',
-            originName: 'superUserController',
-            message: 'admin deactivated',
-            metadata: {
-                userId: req.user?.id,
-                userType: req.user?.role
-            }
-        });
-        return res.json({
+        // Execute mapped function.
+        await executeAction(user, reason, referrerObj);
+        res.status(200).json({
             success: true,
             status: 200,
             data: {
                 user: {
-                    id: deactivatedUser.userId,
-                    username: deactivatedUser.name,
-                    role: deactivatedUser.role,
-                    status: deactivatedUser.status
+                    id: user.userId,
+                    username: user.name,
+                    role: user.role,
+                    status: user.status
                 }
             },
             metadata: {
@@ -249,19 +335,19 @@ export const deactivateAdmin = async (req, res) => {
             level: 'error',
             origin: 'mainService',
             originName: 'superUserController',
-            message: 'Error deactivating admin.',
+            message: `Error performing action: ${action} "accounts/actions"`,
             metadata: {
-                userId: req.user?.id,
-                userType: req.user?.role
+                userId: user_id,
+                userType: role
             },
-            stackTrace: error
+            stackTrace: error.message
         });
         return res.status(500).json({
             success: false,
             status: 500,
             error: {
                 code: "INTERNAL_ERROR",
-                message: "Unexpected error happended while deactivating user."
+                message: "Unexpected error happended while performing this action."
             },
             metadata: {
                 server_time: Date.now(),
@@ -269,96 +355,4 @@ export const deactivateAdmin = async (req, res) => {
             }
         });
     };
-};
-
-export const activateAdmin = async (req, res) => {
-    // Extract data from body.
-    const { adminId } = req.body || {};
-    // Check if required fields are present.
-    if (!adminId) {
-        return res.status(400).json({
-            success: false,
-            status: 400,
-            error: {
-                code: "INCOMPLETE_DATA",
-                message: "Required data is not present."
-            },
-            metadata: {
-                server_time: Date.now(),
-                version: "v1.0.0"
-            }
-        });
-    };
-    const data = {
-        status: 'active',
-        deactivationR: ''
-    }
-    try {
-        // Find the user and set it the status to activated.
-        const activatedUser = await admin.findOneAndUpdate({ userId: adminId }, { $set: data });
-        if (!activatedUser) {
-            return res.status(404).json({
-                success: false,
-                status: 404,
-                error: {
-                    code: "USER_NOT_FOUND",
-                    message: "User no  longer exists on the server."
-                },
-                metadata: {
-                    server_time: Date.now(),
-                    version: "v1.0.0"
-                }
-            });
-        }
-        logger({
-            level: 'info',
-            origin: 'mainService',
-            originName: 'superUserController',
-            message: 'Activated admin successfully!',
-            metadata: {
-                userId: req.user?.id,
-                userType: req.user?.role
-            }
-        });
-        return res.json({
-            success: true,
-            status: 200,
-            data: {
-                user: {
-                    id: activatedUser.userId,
-                    username: activatedUser.name,
-                    role: activatedUser.role,
-                    status: activatedUser.status
-                }
-            },
-            metadata: {
-                server_time: Date.now(),
-                version: "v1.0.0"
-            }
-        });
-    } catch (error) {
-        logger({
-            level: 'error',
-            origin: 'mainService',
-            originName: 'superUserController',
-            message: 'Error Activating admin.',
-            metadata: {
-                userId: req.user?.id,
-                userType: req.user?.role
-            },
-            stackTrace: error.message
-        });
-    };
-    return res.status(500).json({
-        success: false,
-        status: 500,
-        error: {
-            code: "INTERNAL_ERROR",
-            message: "Unexpected error happended while activating user."
-        },
-        metadata: {
-            server_time: Date.now(),
-            version: "v1.0.0"
-        }
-    });
 };
