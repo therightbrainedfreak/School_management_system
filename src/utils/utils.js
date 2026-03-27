@@ -6,7 +6,8 @@ export const generateUniqueId = (role) => {
         teacher: "TCH",
         admin: "ADM",
         parent: "PNT",
-        superuser: "SPU"
+        superuser: "SPU",
+        backoffice: "BCO"
     };
     const rl = rolemap[role];
     if (!rl) {

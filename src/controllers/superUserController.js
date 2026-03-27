@@ -6,12 +6,14 @@ import admin from '../models/admin.js';
 import student from '../models/student.js';
 import teacher from '../models/teacher.js';
 import parent from '../models/parent.js';
+import backoffice from '../models/backoffice.js'
 
 const modelRoleMap = {
     admin: admin,
     student: student,
     teacher: teacher,
-    parent: parent
+    parent: parent,
+    backoffice: backoffice
 }
 
 // Creation, modification and deletion of super user account can be done manually directly into the database

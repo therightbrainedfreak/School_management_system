@@ -33,7 +33,9 @@ const adminSchema = new mongoose.Schema({
     preferences: {type: Object},
     jwtTokenVersion: {type: Number, default: 1},
     status: {type: String, default: "active", enum: ['active', 'suspended', 'drop', 'deactivated']},
-    deactivationR: {type: String}
+    deactivationR: {type: String},
+    disclaimerAccepted: { type: Boolean, default: false },
+    acceptedAt: Date
 },{timestamps: true});
 
 adminSchema.pre('validate', function() {

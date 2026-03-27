@@ -33,7 +33,10 @@ const studentSchema = new mongoose.Schema({
     profilePicturePath: {type: String},
     preferences: {type: Object},
     jwtTokenVersion: {type: Number, default: 1},
-    status: {type: String, default: "active", enum: ['active', 'suspended', 'drop']}
+    deactivationR: {type: String},
+    status: {type: String, default: "active", enum: ['active', 'suspended', 'drop', 'deactivated']},
+    disclaimerAccepted: { type: Boolean, default: false },
+    acceptedAt: Date
 },{timestamps: true});
 
 studentSchema.pre('validate', function() {

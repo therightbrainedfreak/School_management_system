@@ -9,13 +9,15 @@ import student from '../models/student.js';
 import teacher from '../models/teacher.js';
 import parent from '../models/parent.js';
 import su from '../models/superUser.js';
+import backoffice from '../models/backoffice.js'
 
 const modelRoleMap = {
     admin: admin,
     student: student,
     teacher: teacher,
     parent: parent,
-    superuser: su
+    superuser: su,
+    backoffice: backoffice
 }
 
 export const loginController = async (req, res) => {
