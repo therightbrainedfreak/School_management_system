@@ -10,7 +10,7 @@ export const authenticate = (req, res, next) => {
             status: 401,
             error: {
                 code: "UNAUTHORISED",
-                message: "You are not authorised. Please login First."
+                message: "You are not authorised. Please login First.",
             },
             metadata: {
                 server_time: Date.now(),

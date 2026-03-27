@@ -1,15 +1,30 @@
 import 'dotenv/config'
 import { logger } from '../utils/logger.js';
-import admin from "../models/admin.js";
-import { generateNewAdminNotification } from '../utils/mailNotificationService.js';
+import { generateNewUserNotification } from '../utils/mailNotificationService.js';
+
+import admin from '../models/admin.js';
+import student from '../models/student.js';
+import teacher from '../models/teacher.js';
+import parent from '../models/parent.js';
+
+const modelRoleMap = {
+    admin: admin,
+    student: student,
+    teacher: teacher,
+    parent: parent
+}
 
 // Creation, modification and deletion of super user account can be done manually directly into the database
 // as it is the user who can create a admin and backoffice.
 
-export const createAdmin = async (req, res) => {
+export const createUser = async (req, res) => {
     // Extract payload from the req body.
-    const adminModel = req.body || {};
-    if (!adminModel) {
+    const userModel = req.body || {};
+    // Extact data from the authoriser for logger.
+    const userId = req.user?.id;
+    const userType = req.user?.role;
+    // Check if model exist.
+    if (!userModel) {
         return res.status(400).json({
             success: false,
             status: 400,
@@ -22,26 +37,61 @@ export const createAdmin = async (req, res) => {
                 version: "v1.0.0"
             }
         })
-    }
-    // Extact data from the authoriser for logger.
-    const userId = req.user?.id;
-    const userType = req.user?.role;
+    };
+    // Check if the data provided by client contains role for mapping.
+    const newUserRole = userModel?.role || null;
+    if (!newUserRole) {
+        return res.status(400).json({
+            success: false,
+            status: 400,
+            error: {
+                code: "INCOMPLETE_DATA",
+                message: "User role is required to create a user."
+            },
+            metadata: {
+                server_time: Date.now(),
+                version: "v1.0.0"
+            }
+        });
+    };
+    // Map model to the role.
+    const MODEL = modelRoleMap[newUserRole];
+        if ( !MODEL ) {
+        return res.status(400).json({
+            success: false,
+            status: 400,
+            error: {
+                code: "INVALID_ROLE_MAP",
+                message: "Invalid role provided."
+            },
+            metadata: {
+                server_time: Date.now(),
+                version: "v1.0.0"
+            }
+        });
+    };
     // Proceed for user creation.
     try {
         // Create model from the payload.
-        const newAdmin = new admin(adminModel);
+        const newUser = new MODEL(userModel);
         // Attemp to save the model.
-        await newAdmin.save();
+        await newUser.save();
         // Record Acknowledgement
-        const receiptData = newAdmin;
+        const receiptData = newUser;
         // Attemp a notification for the new admin created.
-        generateNewAdminNotification(receiptData.name, receiptData.userId, receiptData.role, receiptData.createdAt, receiptData.email);
+        generateNewUserNotification(
+            receiptData.name,
+            receiptData.userId,
+            receiptData.role,
+            receiptData.createdAt,
+            receiptData.email
+        );
         // Log user creation success;
         logger({
             level: 'info',
             origin: 'mainService',
             originName: 'superUserController',
-            message: `Created new Admin: ${recipientData.userId}`,
+            message: `Created new User: ${receiptData.userId}`,
             metadata: {
                 userId: userId,
                 userType: userType
@@ -51,12 +101,12 @@ export const createAdmin = async (req, res) => {
         res.status(201).json({
             success: true,
             status: 201,
-            message: "Admin created!",
+            message: "User created!",
             data: {
                 user: {
                     userId: receiptData.userId,
                     username: receiptData.name,
-                    role: "admin"
+                    role: receiptData.Role
                 }
             },
             metadata: {
@@ -104,7 +154,7 @@ export const createAdmin = async (req, res) => {
             level: 'error',
             origin: 'mainService',
             originName: 'superUserController',
-            message: 'error creating new admin',
+            message: 'error creating new user',
             metadata: {
                 userId: userId,
                 userType: userType
