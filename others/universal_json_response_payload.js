@@ -22,7 +22,7 @@ const ePayLoad = {
         message: "Your session has times out. Please login again."
     },
     metadata: {
-        server_time: "i34598345",
+        server_time: Date.now(),
         version: "v1.0.0"
     }
 }

@@ -2,16 +2,18 @@ import mongoose from "mongoose";
 import { generateAppRef } from "../utils/utils.js";
 import uniqueValidator from "mongoose-unique-validator";
 
-const draftStudentApplicationSchema = new mongoose.Schema({
+const newApplicationSchema = new mongoose.Schema({
     appRef: {type: String, required: true, trim: true, index: true, unique: true},
     appStatus: {type: String, default: 'DRAFT', enum: ['DRAFT', 'ACCEPTED', 'REJECTED', 'PROCESSING']},
+    reasonForRejection: {type: String},
     name: {type: String, required: true},
     surname: {type: String},
     dob: {type: String, required: true},
     gender: {type: String, required: true, enum: ['male', 'female', 'others']},
     fatherName: {type: String, required: true},
     motherName: {type: String, required: true},
-    class: {type: String, required: true},
+    forStandard: {type: String},
+    subjectExpertise: {type: Array},
     address: {
         houseNo: {type: String},
         street: {type: String, required: true},
@@ -29,27 +31,24 @@ const draftStudentApplicationSchema = new mongoose.Schema({
         identityDocNumber: {type: String, required: true, unique: true},
         isVerified: {type: Boolean, default: false}
     },
-    role: {type: String, required: true, enum: ['student'], default: 'student'},
+    role: {type: String, required: true, enum: ['student', 'parent', 'teacher', 'backoffice']},
     isAppVerified: {type: Boolean, default: false},
-    appVerifier: {type: String},
-    vAppointment: {
-        isAppointed: {type: Boolean, default: false},
-        date: {type: Date},
-        verifier: {type: String}
-    }
+    verifiedBy: {type: String, enum: ['admin', 'superuser']},
+    isAppointed: {type: Boolean, default: false},
+    appointmentId: {type: String}
 }, {
     timestamps: true
 });
 
-draftStudentApplicationSchema.plugin(uniqueValidator, { message: 'Error, filed value {PATH} already exists.' });
+newApplicationSchema.plugin(uniqueValidator, { message: 'Error, value {PATH} already exists.' });
 
-draftStudentApplicationSchema.pre('validate', function() {
+newApplicationSchema.pre('validate', function() {
     if (this.isNew && !this.appRef) {
         let genAppRef = generateAppRef();
         this.appRef = genAppRef;
     };
 });
 
-const draftStudentApplication = mongoose.model('draftStudentApplication', draftStudentApplicationSchema);
+const newApplication = mongoose.model('newApplication', newApplicationSchema);
 
-export default draftStudentApplication;
+export default newApplication;
