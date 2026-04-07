@@ -4,23 +4,23 @@ import cookieParser from 'cookie-parser';
 import connectDB from './src/config/db.js';
 import jsonHandler from './src/middlewares/jsonHandler.js';
 import cron from 'node-cron';
-import { generateTimePeriodsForToday } from './src/config/timeScheduleGenerator.js';
+import { generateTimePeriod } from './src/config/timeScheduleGenerator.js';
 
 const port = process.env.PORT || 3000;
 const app = express();
 
 connectDB();
 
-cron.schedule('0 6 * * *', () => {
-    generateTimePeriodsForToday();
-}, {
-    scheduled: true
-});
-
 // Only run while needed or running first time, running this will wipe out all the info linked to the master calender suck as holidays, schedules events.
 
 import { initCalenderGenerator } from './src/config/masterCalenderGenerator.js';
 initCalenderGenerator(false); // run it with true to reset and generate a fresh master calender.
+
+cron.schedule('0 6 * * *', () => {
+    generateTimePeriod();
+}, {
+    scheduled: true
+});
 
 app.use(express.json());
 app.use(jsonHandler);

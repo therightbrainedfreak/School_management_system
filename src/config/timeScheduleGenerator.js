@@ -17,202 +17,116 @@ const modelRoleMap = {
     superuser: superuser
 };
 
-const present = new Date();
-
 async function fetchDay(month, day) {
-    const currentYear = present.getFullYear();
-
+    const currentYear = new Date().getFullYear();
     try {
         const cBucket = await masterCalender.findOne({ assessmentMonth: month });
-        if (!cBucket) {
-            throw new Error("Bucket not found.");
-        };
-        const days = cBucket.days;
-        if (day <= 0 || day > days.length) {
-            throw new Error("Incorrect day");
-        };
-        const requestedDay = days.find(d => d.day = day);
-        const date = {
+        if (!cBucket) throw new Error("Bucket not found.");
+
+        // Fix: Use strict equality ===
+        const requestedDay = cBucket.days.find(d => d.day === day);
+        if (!requestedDay) throw new Error("Incorrect day");
+
+        return {
             day: requestedDay.day,
             month: cBucket.monthOf,
             dayName: requestedDay.dayName,
             status: requestedDay.status,
+            // Use requestedDay.day (consistency)
             dString: set(new Date(), { year: currentYear, month: month, date: requestedDay.day })
-        }
-        return date;
-    } catch (error) {
-        throw new Error("Error fetching day:", error);
-    };
-};
-
-const getData = async (role) => {
-    const MODEL = modelRoleMap[role];
-    if (!MODEL) {
-        throw new Error('Incorrect model provided');
-    };
-    try {
-        const users = await MODEL.find();
-        return users;
-    } catch (error) {
-        throw new Error("Error getting user data:", error);
-    };
-};
-
-const getTimeSchedule = async () => {
-    try {
-        const timeSchedule = await configuration.findOne({ confName: "timeSchedule" });
-        if (!timeSchedule) {
-            throw new Error('Cannot get time schedule')
         };
-        return timeSchedule;
     } catch (error) {
-        throw new Error("Error getting time Schedule:", error);
-    };
-};
+        throw new Error(`Error fetching day: ${error.message}`);
+    }
+}
 
 const getTimeSpan = async (day, month) => {
     try {
-        const timeSchedule = await getTimeSchedule();
-        console.log(`Processing timespan for ${day}/${month + 1}/${present.getFullYear()}`);
+        const timeSchedule = await configuration.findOne({ confName: "timeSchedule" });
         const s = await fetchDay(month, day);
-        let startDate = '';
-        let endDate = '';
+        const currentYear = new Date().getFullYear();
+
+        let startH = 0, startM = 0, endH = 0, endM = 0;
 
         if (s.status === 'working') {
-            startDate = set(new Date(), {
-                date: s.Day,
-                month: month - 1,
-                year: present.getFullYear(),
-                hours: timeSchedule.confData.startHours || 0,
-                minutes: timeSchedule.confData.startMinutes || 0
-            });
-            endDate = set(new Date(), {
-                date: s.Day,
-                month: month - 1,
-                year: present.getFullYear(),
-                hours: timeSchedule.confData.endHours || 0,
-                minutes: timeSchedule.confData.endMinutes || 0
-            });
-        } else if ( s.status === 'event' ) {
-            startDate = set(new Date(), {
-                date: s.Day,
-                month: month - 1,
-                year: present.getFullYear(),
-                hours: timeSchedule.confData.eventStartHours || 0,
-                minutes: timeSchedule.confData.eventStartMinutes || 0
-            });
-            endDate = set(new Date(), {
-                date: s.Day,
-                month: month - 1,
-                year: present.getFullYear(),
-                hours: timeSchedule.confData.EventEndHours || 0,
-                minutes: timeSchedule.confData.EventEndMinutes || 0
-            });
-        } else {
-            startDate = set(new Date(), {
-                date: s.Day,
-                month: month - 1,
-                status: s.status,
-                year: present.getFullYear(),
-                hours: set(new Date(), { hours: 0, minutes: 0, seconds: 0 }),
-                minutes: set(new Date(), { hours: 0, minutes: 0, seconds: 0 })
-            });
-            endDate = set(new Date(), {
-                date: s.Day,
-                month: month - 1,
-                year: present.getFullYear(),
-                hours: set(new Date(), { hours: 0, minutes: 0, seconds: 0 }),
-                minutes: set(new Date(), { hours: 0, minutes: 0, seconds: 0 })
-            });
+            startH = timeSchedule.confData.startHours;
+            startM = timeSchedule.confData.startMinutes;
+            endH = timeSchedule.confData.endHours;
+            endM = timeSchedule.confData.endMinutes;
+        } else if (s.status === 'event') {
+            startH = timeSchedule.confData.eventStartHours;
+            startM = timeSchedule.confData.eventStartMinutes;
+            endH = timeSchedule.confData.eventEndHours;
+            endM = timeSchedule.confData.eventEndMinutes;
         }
-        return {
-            startDate: startDate,
-            endDate: endDate,
-            status: s.status
-        }
-    } catch (error) {
-        throw new Error("Cannot get timestamp:", error);
-    };
-}
 
-const generateTimePeriod = async (userId, userModel, startFrom, endAt, status) => {
-    try {
-        const previousTp = await timePeriod.find({targetId: userId});
-        if (previousTp.length > 0) {
-            for (const cTp of previousTp) {
-                const sDate = cTp.startTime;
-                const eDate = cTp.endTime;
-                if (sDate.getDate() === startFrom.getDate() && eDate.getDate() === endAt.getDate()) {
-                    return;
-                } else {
-                    const newTimeP = new timePeriod({
-                        targetId: userId,
-                        onModel: userModel,
-                        startTime: startFrom,
-                        endTime: endAt,
-                        status: status
-                    })
-                    await newTimeP.save();
-                }
-            };
-        } else {
-            const newTimeP = new timePeriod({
-                targetId: userId,
-                onModel: userModel,
-                startTime: startFrom,
-                endTime: endAt,
-                status: status
-            })
-            await newTimeP.save();
-        };
-        return true;
+        const startDate = set(new Date(), { year: currentYear, month, date: s.day, hours: startH, minutes: startM, seconds: 0, milliseconds: 0 });
+        const endDate = set(new Date(), { year: currentYear, month, date: s.day, hours: endH, minutes: endM, seconds: 0, milliseconds: 0 });
+
+        return { startDate, endDate, status: s.status };
     } catch (error) {
-        throw new Error("Error generating time period:", error);
-    };
+        throw new Error(`Cannot get timestamp: ${error.message}`);
+    }
 };
 
-export const generateTimePeriodsForToday = async () => {
-
-    console.log("");
-    console.log("---- RUNNING TIME SCHEDULER ----");
-    console.log("");
-
+export const generateTimePeriod = async () => {
     const roles = ['admin', 'student', 'teacher', 'backoffice'];
-    const day = present.getDate();
-    const month = present.getMonth();
+    const now = new Date();
+    const day = now.getDate();
+    const month = now.getMonth();
 
     try {
         const { startDate, endDate, status } = await getTimeSpan(day, month);
-        for (const r of roles) {
-            console.log("generating time periods for:", r);
-            const data = await getData(r);
-            if (r === 'student') {
-                let count = 0;
-                const studentStartTimestamp = addMinutes(startDate, 30);
-                const studentEndTimestamp = subMinutes(endDate, 30);
-                if (data.length > 0) {
-                    for (const d of data) {
-                        console.log(`Progress: ${count}/${data.length}`);
-                        await generateTimePeriod(d.userId, d.role, studentStartTimestamp, studentEndTimestamp, status);
-                        count++;
+
+        for (const role of roles) {
+            const MODEL = modelRoleMap[role];
+            const data = await MODEL.find();
+            if (data.length === 0) continue;
+
+            // 1. Define the time bounds for "Today" (00:00:00 to 23:59:59)
+            const dayStart = set(startDate, { hours: 0, minutes: 0, seconds: 0 });
+            const dayEnd = set(startDate, { hours: 23, minutes: 59, seconds: 59 });
+
+            // 2. Get all User IDs for this role
+            const userIds = data.map(d => d.userId);
+
+            // 3. Find which users ALREADY have a record for this specific day
+            const existingRecords = await timePeriod.find({
+                targetId: { $in: userIds },
+                startTime: { $gte: dayStart, $lte: dayEnd }
+            });
+
+            // Create a Set of IDs that already have a schedule today for O(1) lookup
+            const skipIds = new Set(existingRecords.map(r => r.targetId));
+
+            // 4. Filter data to only include users NOT in the skipIds set
+            const newEntries = data
+                .filter(d => !skipIds.has(d.userId))
+                .map(d => {
+                    // Adjust times for students
+                    const finalStart = role === 'student' ? addMinutes(startDate, 30) : startDate;
+                    const finalEnd = role === 'student' ? subMinutes(endDate, 30) : endDate;
+
+                    return {
+                        targetId: d.userId,
+                        onModel: d.role,
+                        startTime: finalStart,
+                        endTime: finalEnd,
+                        status: status
                     };
-                } else {
-                    console.log(`Skipping ${r}s as no user(s) exists in the db.`);
-                };
+                });
+
+            // 5. Batch insert only the missing ones
+            if (newEntries.length > 0) {
+                await timePeriod.insertMany(newEntries);
+                console.log(`Added ${newEntries.length} new records for ${role}.`);
             } else {
-                let count = 0;
-                if (data.length > 0) {
-                    for (const d of data) {
-                        console.log(`Progress: ${count}/${data.length}`);
-                        await generateTimePeriod(d.userId, d.role, startDate, endDate, status);
-                        count ++;
-                    };
-                } else {
-                    console.log(`Skipping ${r}s as no user(s) exists in the db.`);
-                };
-            };
-        };
+                console.log(`All ${role}s already have records for today.`);
+            }
+        }
     } catch (error) {
-        throw new Error(error);
-    };
+        console.error("Scheduler Failed:", error);
+    }
 };
+
+generateTimePeriod();
