@@ -1,13 +1,16 @@
 import { logger } from '../utils/logger.js';
 
 import newApplication from '../models/newApplication.js';
+import nHistory from '../models/notificationHistory.js';
+import { newNotificationBasic } from '../utils/mailNotificationService.js';
+import mongoose from 'mongoose';
 
 const validRoles = ['student', 'teacher', 'parent', 'backoffice'];
 
-export const newApplicationHandler = async ( req, res ) => {
+export const newApplicationHandler = async (req, res) => {
     // Extract the application from the request body.
     const applicationModel = req.body || {};
-    if ( !applicationModel ) {
+    if (!applicationModel) {
         return res.status(400).json({
             success: false,
             status: 400,
@@ -123,18 +126,38 @@ export const newApplicationHandler = async ( req, res ) => {
     };
 };
 
-export const getApplications = async ( req, res ) => {
+export const getApplications = async (req, res) => {
+    // Extract filtering options from queries.
+    const { isVerified, role, status } = req.query;
+    let filter = {};
+    // Add role filter to the search query.
+    if (role) {
+        filter.role = role;
+    };
+    // Add isVerified filer to the search query.
+    if (isVerified === 'true') {
+        filter.isAppVerified = true;
+    } else {
+        filter.isAppVerified = false;
+    };
+    // add status filter to the filters list.
+    if (status) {
+        const validStatus = [ "ACCEPTED", "REJECTED", "DRAFT", "PROCESSING" ];
+        if (validStatus.includes(status.toUpperCase())) {
+            filter.appStatus = status.toUpperCase()
+        };
+    };
     try {
         // Find applications in the server.
-        const applications = await newApplication.find();
+        const applications = await newApplication.find(filter).sort({ createdAt: -1 });
         // Error is applications not found.
-        if ( applications.length <= 0 ) {
+        if (applications.length <= 0) {
             return res.status(404).json({
                 success: false,
                 status: 404,
                 error: {
                     code: "NOT_FOUND",
-                    message: "Applications not found or empyt."
+                    message: "Applications not found."
                 },
                 metadata: {
                     server_time: Date.now(),
@@ -168,7 +191,7 @@ export const getApplications = async ( req, res ) => {
                 version: "v1.0.0"
             }
         });
-    } catch ( error ) {
+    } catch (error) {
         logger({
             level: 'error',
             origin: 'mainService',
@@ -193,12 +216,14 @@ export const getApplications = async ( req, res ) => {
     };
 };
 
-export const getApplication = async ( req, res ) => {
+export const getApplication = async (req, res) => {
     // Extract userId from the param.
     const reference = req.params?.appRef;
     // Process userId.
     try {
-        const application = await newApplication.findOne({appRef: reference});
+        // Find the requested application from the database.
+        const application = await newApplication.findOne({ appRef: reference });
+        // Respond with error if application was not found.
         if (!application) {
             return res.status(404).json({
                 success: false,
@@ -213,17 +238,31 @@ export const getApplication = async ( req, res ) => {
                 }
             });
         };
+        // Define payload for sending to user.
+        const rPayload = {
+            appRef: application.appRef,
+            appStatus: application.appStatus,
+            name: application.name,
+            gender: application.gender,
+            fatherName: application.fatherName,
+            motherName: application.motherName,
+            address: application.address,
+            email: application.email,
+            role: application.role
+        }
+        // Return the payload to the client.
         res.json({
             success: true,
             status: 200,
             data: {
-                application: application
+                application: rPayload
             },
             metadata: {
                 server_time: Date.now(),
                 version: "v1.0.0"
             }
-        })
+        });
+
     } catch (error) {
         logger({
             level: 'error',
@@ -246,5 +285,151 @@ export const getApplication = async ( req, res ) => {
                 version: "v1.0.0"
             }
         });
+    };
+};
+
+export const applicationReview = async (req, res) => {
+    // extract reference number from url.
+    const appRefe = req.params?.appRef;
+    // extract referrer from the jwt token.
+    const refferer = req.user;
+    // check if the application reference is valid or nt undefined, more checks can be performed.
+    if (!appRefe || appRefe === undefined) {
+        return res.status(400).json({
+            success: false,
+            status: 400,
+            error: {
+                code: "INVALID_DATA",
+                message: "Application reference not provided or invalid."
+            },
+            metadata: {
+                server_time: Date.now(),
+                version: "v1.0.0"
+            }
+        });
+    };
+    // Create a mongoose session for db queries.
+    const session = await mongoose.startSession();
+    try {
+        // Start the database transaction.
+        session.startTransaction();
+        // I dont know if i am doing it right. Get the requested applicaition from the database.
+        const application = await newApplication.findOne({ appRef: appRefe }, null, { session });
+        // Return an error response if application not found.
+        if (!application) {
+            return res.status(400).json({
+                success: false,
+                status: 400,
+                error: {
+                    code: "NOT_FOUND",
+                    message: "Application not found for the provided reference."
+                },
+                metadata: {
+                    server_time: Date.now(),
+                    version: "v1.0.0"
+                }
+            });
+        };
+        // Extract required fields from the applciation fetched from the database.
+        const { name, appRef, email, role, appStatus } = application;
+        // Stop the process if the application status is not draft.
+        if (appStatus !== "DRAFT") {
+            return res.status(400).json({
+                success: false,
+                status: 400,
+                error: {
+                    code: "INVALID_ACTION",
+                    message: "Cannot proceed the application is already processed or under process."
+                },
+                metadata: {
+                    server_time: Date.now(),
+                    version: "v1.0.0"
+                }
+            });
+        };
+        // Set the application status to processing.
+        await newApplication.findOneAndUpdate({ appRef: appRefe }, { appStatus: "PROCESSING" }, { session });
+        // Define details for the history saver and the notifier.
+        const nTitle = "Application Under Review.";
+        const nMessage = `Your Physical documents has been received for application reference: ${appRef}, application is under review. You will be notified when the application is accepted or rejected.`;
+        // Create a new notification history.
+        const notificationHistory = new nHistory({
+            title: nTitle,
+            recipient: {
+                appRef: appRef,
+                name: name,
+                mail: email,
+                role: role
+            },
+            message: nMessage,
+            referrer: {
+                userId: refferer.id,
+                role: refferer.role
+            }
+        });
+        // Save it to database.
+        await notificationHistory.save({ session });
+        // extract referenceId from the new history db document.
+        const nReference = notificationHistory.referenceId;
+        // Define paylad for notifier.
+        const notificationPayload = {
+            options: {
+                referenceId: nReference,
+                title: nTitle,
+                message: nMessage
+            },
+            recipient: {
+                name: name,
+                mail: email,
+                role: role
+            }
+        };
+        // Commit all the db queries performed above.
+        await session.commitTransaction();
+        // Send a notification to the user without awaiting for success.
+        newNotificationBasic(notificationPayload);
+        // Respond with success.
+        res.json({
+            success: true,
+            status: 200,
+            data: {
+                appRef: appRef,
+                message: "Status updated to processing"
+            },
+            metadata: {
+                server_time: Date.now(),
+                version: "v1.0.0"
+            }
+        });
+
+    } catch (error) {
+        // Abort the db transaction performed above if anything goes wrong.
+        await session.abortTransaction();
+        // Log the error to the database.
+        logger({
+            level: 'error',
+            origin: 'mainService',
+            originName: 'newApplicationsController',
+            message: 'Unexpected error while forwarding application for review.',
+            metadata: {
+            },
+            stackTrace: error.message
+        });
+        // Respond with error.
+        res.status(500).json({
+            success: false,
+            status: 500,
+            error: {
+                code: "INTERNAL_ERROR",
+                message: "Unexpected error occured while forwarding application for review."
+            },
+            metadata: {
+                server_time: Date.now(),
+                version: "v1.0.0"
+            }
+        });
+    } finally {
+        // Finally close the mongoose session.
+        await session.endSession();
     };
 };

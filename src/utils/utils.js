@@ -34,3 +34,10 @@ export const generateCalenderId = () => {
     const generateId = `${"MCAL"}${rInt()}`;
     return generateId
 };
+
+export const generateMailRef = () => {
+    const int = "23456789ABCDEFGHJKMNPQRSTUVWXYZ";
+    const rInt = customAlphabet(int, 12);
+    const generateId = rInt();
+    return generateId;
+}

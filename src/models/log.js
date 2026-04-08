@@ -1,4 +1,4 @@
-import mongoose, { Mongoose } from "mongoose";
+import mongoose from "mongoose";
 
 const logSchema = new mongoose.Schema({
     level: {type: String, required: true, enum: ['info', 'error', 'warn']},

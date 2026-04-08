@@ -128,5 +128,3 @@ export const generateTimePeriod = async () => {
         console.error("Scheduler Failed:", error);
     }
 };
-
-generateTimePeriod();
