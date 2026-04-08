@@ -142,7 +142,7 @@ export const getApplications = async (req, res) => {
     };
     // add status filter to the filters list.
     if (status) {
-        const validStatus = [ "ACCEPTED", "REJECTED", "DRAFT", "PROCESSING" ];
+        const validStatus = ["ACCEPTED", "REJECTED", "DRAFT", "PROCESSING"];
         if (validStatus.includes(status.toUpperCase())) {
             filter.appStatus = status.toUpperCase()
         };
@@ -351,7 +351,7 @@ export const applicationReview = async (req, res) => {
         await newApplication.findOneAndUpdate({ appRef: appRefe }, { appStatus: "PROCESSING" }, { session });
         // Define details for the history saver and the notifier.
         const nTitle = "Application Under Review.";
-        const nMessage = `Your Physical documents has been received for application reference: ${appRef}, application is under review. You will be notified when the application is accepted or rejected.`;
+        const nMessage = `Your application with reference: ${appRef}, is under review. After performing required validation you will be notified with the application status.`;
         // Create a new notification history.
         const notificationHistory = new nHistory({
             title: nTitle,
@@ -431,5 +431,192 @@ export const applicationReview = async (req, res) => {
     } finally {
         // Finally close the mongoose session.
         await session.endSession();
+    };
+};
+
+export const applicationReject = async (req, res) => {
+    // Get the reson provided for rejection.
+    const { reasonForRejection } = req.body || {};
+    // Get the user id of which the application is entitled for rejection.
+    const applicationReference = req.params?.appRef;
+    // Get the referer from the req.user provided by jwt payload.
+    const referer = req.user || {};
+    // Check if the application reference is provided.
+    if (!applicationReference) {
+        return res.status(400).json({
+            success: false,
+            status: 400,
+            error: {
+                code: "INVALID_DATA",
+                message: "Application reference number is required."
+            },
+            metadata: {
+                server_time: Date.now(),
+                version: "v1.0.0"
+            }
+        });
+    };
+    // Check if the user provided the reason for rejection.
+    if (!reasonForRejection || reasonForRejection === "") {
+        return res.status(400).json({
+            success: false,
+            status: 400,
+            error: {
+                code: "INVALID_DATA",
+                message: "Reason is required for rejection."
+            },
+            metadata: {
+                server_time: Date.now(),
+                version: "v1.0.0"
+            }
+        });
+    };
+    // Create a mongoose session.
+    const tSession = await mongoose.startSession();
+    try {
+        // Start the database transaction.
+        tSession.startTransaction();
+        const application = await newApplication.findOne({ appRef: applicationReference }, null, { tSession });
+        // Check if the session exists.
+        if (!application) {
+            return res.status(404).json({
+                success: false,
+                status: 404,
+                error: {
+                    code: "NOT_FOUND",
+                    message: "Application does not exists."
+                },
+                metadata: {
+                    server_time: Date.now(),
+                    version: "v1.0.0"
+                }
+            });
+        };
+        // Extra checks for the application.
+        if (application.appStatus === "ACCEPTED") {
+            return res.status(400).json({
+                success: false,
+                status: 400,
+                error: {
+                    code: "INVALID_ACTION",
+                    message: "Application cannot be rejected as it is already have been approved."
+                },
+                metadata: {
+                    server_time: Date.now(),
+                    version: "v1.0.0"
+                }
+            });
+        };
+        if (application.appStatus === "REJECTED") {
+            return res.status(400).json({
+                success: false,
+                status: 400,
+                error: {
+                    code: "INVALID_ACTION",
+                    message: "This application has been rejected already."
+                },
+                metadata: {
+                    server_time: Date.now(),
+                    version: "v1.0.0"
+                }
+            });
+        };
+        if (application.appStatus === "DRAFT") {
+            return res.status(400).json({
+                success: false,
+                status: 400,
+                error: {
+                    code: "INVALID_ACTION",
+                    message: "Cannot reject application without reviewing it."
+                },
+                metadata: {
+                    server_time: Date.now(),
+                    version: "v1.0.0"
+                }
+            });
+        };
+        // update the status.
+        await newApplication.findOneAndUpdate({ appRef: applicationReference }, { appStatus: "REJECTED" }, { tSession });
+        // Define configurations for notification.
+        const nTitle = "Application Rejected";
+        const nMessage = `Your application with the reference id: ${application.appRef}, has been rejected due to the following reason(s). ${reasonForRejection}`;
+        // Create a new notification history.
+        const notificationHistory = new nHistory({
+            title: nTitle,
+            recipient: {
+                appRef: application.appRef,
+                name: application.name,
+                mail: application.email,
+                role: application.role
+            },
+            message: nMessage,
+            referrer: {
+                userId: referer.id,
+                role: referer.role
+            }
+        });
+        // Save it to database.
+        await notificationHistory.save({ tSession });
+        // extract referenceId from the new history db document.
+        const nReference = notificationHistory.referenceId;
+        // Define paylad for notifier.
+        const notificationPayload = {
+            options: {
+                referenceId: nReference,
+                title: nTitle,
+                message: nMessage
+            },
+            recipient: {
+                name: application.name,
+                mail: application.email,
+                role: application.role
+            }
+        };
+        // Commit all the db queries performed above.
+        await tSession.commitTransaction();
+        // Send a notification to the user without awaiting for success.
+        newNotificationBasic(notificationPayload);
+        // Respond with success.
+        res.json({
+            success: true,
+            status: 200,
+            data: {
+                appRef: application.appRef,
+                message: "Status updated"
+            },
+            metadata: {
+                server_time: Date.now(),
+                version: "v1.0.0"
+            }
+        });
+    } catch (error) {
+        // Abort the db transaction performed above if anything goes wrong.
+        await tSession.abortTransaction();
+        // Log the error to the database.
+        logger({
+            level: 'error',
+            origin: 'mainService',
+            originName: 'newApplicationsController',
+            message: 'Unexpected error while trying to reject application.',
+            metadata: {
+            },
+            stackTrace: error.message
+        });
+        // Respond with error.
+        res.status(500).json({
+            success: false,
+            status: 500,
+            error: {
+                code: "INTERNAL_ERROR",
+                message: "Unexpected error occured while rejecting application."
+            },
+            metadata: {
+                server_time: Date.now(),
+                version: "v1.0.0"
+            }
+        });
+    } finally {
+        // Finally close the mongoose session.
+        await tSession.endSession();
     };
 };

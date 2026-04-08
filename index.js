@@ -1,3 +1,5 @@
+// *imports
+
 import 'dotenv/config';
 import express from 'express';
 import cookieParser from 'cookie-parser';
@@ -6,7 +8,10 @@ import jsonHandler from './src/middlewares/jsonHandler.js';
 import cron from 'node-cron';
 import { generateTimePeriod } from './src/config/timeScheduleGenerator.js';
 
+// *declarations / configs
+
 const port = process.env.PORT || 3000;
+
 const app = express();
 
 connectDB();
@@ -14,7 +19,10 @@ connectDB();
 // Only run while needed or running first time, running this will wipe out all the info linked to the master calender suck as holidays, schedules events.
 
 import { initCalenderGenerator } from './src/config/masterCalenderGenerator.js';
+
 initCalenderGenerator(false); // run it with true to reset and generate a fresh master calender.
+
+// *daily cron job for creating timeschedule for every user.
 
 cron.schedule('0 6 * * *', () => {
     generateTimePeriod();
@@ -22,9 +30,25 @@ cron.schedule('0 6 * * *', () => {
     scheduled: true
 });
 
+// *middlewares
+
 app.use(express.json());
 app.use(jsonHandler);
 app.use(cookieParser());
+
+// *routes
+
+app.get('/', (req, res) => {
+    res.json({
+        message: 'Welome to school management system.',
+        metadata: {
+            api: "v1.0.0",
+            node: "v24.6.0",
+            npm: "v11.5.1",
+            mongodb: "v8.0.0"
+        }
+    });
+});
 
 import authRoutes from './src/routes/authRoutes.js';
 import publicRoutes from './src/routes/publicRoutes.js';
@@ -36,9 +60,7 @@ app.use('/api/v1/public', publicRoutes);
 app.use('/api/v1/su', superUserRoutes);
 app.use('/api/v1', systemRoutes);
 
-app.get('/', (req, res) => {
-    res.json({message: 'Welome to school management backend.', api: "v1.0.0"});
-});
+// *listener
 
 app.listen(port, () => {
     console.log(`Listening on port => ${port}`);
