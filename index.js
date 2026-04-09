@@ -7,6 +7,7 @@ import connectDB from './src/config/db.js';
 import jsonHandler from './src/middlewares/jsonHandler.js';
 import cron from 'node-cron';
 import { generateTimePeriod } from './src/config/timeScheduleGenerator.js';
+import { globalLimiter } from './src/middlewares/rateLimiter.js';
 
 // *declarations / configs
 
@@ -16,7 +17,7 @@ const app = express();
 
 connectDB();
 
-// Only run while needed or running first time, running this will wipe out all the info linked to the master calender suck as holidays, schedules events.
+// Only run while needed or running first time, running this will wipe out all the info linked to the master calender such as holidays, schedules events.
 
 import { initCalenderGenerator } from './src/config/masterCalenderGenerator.js';
 
@@ -32,6 +33,8 @@ cron.schedule('0 6 * * *', () => {
 
 // *middlewares
 
+app.use(globalLimiter);
+app.set('trust proxy', 1)
 app.use(express.json());
 app.use(jsonHandler);
 app.use(cookieParser());
