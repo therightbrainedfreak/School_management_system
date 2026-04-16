@@ -8,6 +8,7 @@ import jsonHandler from './src/middlewares/jsonHandler.js';
 import cron from 'node-cron';
 import { generateTimePeriod } from './src/config/timeScheduleGenerator.js';
 import { globalLimiter } from './src/middlewares/rateLimiter.js';
+import cors from 'cors';
 
 // *declarations / configs
 
@@ -33,6 +34,23 @@ cron.schedule('0 6 * * *', () => {
 
 // *middlewares
 
+const allowedOrigins = [
+  'http://localhost:5500',
+  'http://127.0.0.1:5500',
+  'http://localhost:3000',
+];
+
+app.use(cors({
+  origin: (origin, callback) => {
+    if (!origin || allowedOrigins.includes(origin)) {
+      callback(null, true);
+    } else {
+      callback(new Error('Not allowed by CORS'));
+    }
+  },
+  credentials: true
+}));
+
 app.use(globalLimiter);
 app.set('trust proxy', 1)
 app.use(express.json());
@@ -48,18 +66,16 @@ app.get('/', (req, res) => {
             api: "v1.0.0",
             node: "v24.6.0",
             npm: "v11.5.1",
-            mongodb: "v8.0.0"
+            mongodb: "v8.2.0"
         }
     });
 });
 
 import authRoutes from './src/routes/authRoutes.js';
-import publicRoutes from './src/routes/publicRoutes.js';
 import superUserRoutes from './src/routes/superUserRoutes.js';
 import systemRoutes from './src/routes/systemRoutes.js';
 
 app.use('/api/v1/auth', authRoutes);
-app.use('/api/v1/public', publicRoutes);
 app.use('/api/v1/su', superUserRoutes);
 app.use('/api/v1', systemRoutes);
 

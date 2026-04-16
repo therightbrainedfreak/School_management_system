@@ -6,18 +6,11 @@ const suSchema = new mongoose.Schema({
     userId: {type: String, required: true, trim: true, index: true, unique: true},
     password: {type: String, required: true, trim: true},
     name: {type: String, required: true},
-    surname: {type: String},
-    dob: {type: String, required: true},
-    gender: {type: String, required: true},
-    fatherName: {type: String, required: true},
-    motherName: {type: String, required: true},
     email: {type: String, required: true, trim: true},
     isMailVerified: {type: Boolean, default: false},
     role: {type: String, required: true, enum: ['superuser']},
-    profilePicturePath: {type: String},
     preferences: {type: Object},
     jwtTokenVersion: {type: Number, default: 1},
-    phone: {type: String, required: true},
     status: {type: String, default: 'active', enum: ['active', 'suspended', 'drop']}
 },{timestamps: true});
 

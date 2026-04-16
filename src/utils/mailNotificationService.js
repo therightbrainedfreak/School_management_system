@@ -1,5 +1,6 @@
 import 'dotenv/config';
 import nodemailer from 'nodemailer';
+import { passwordGenerator } from './utils.js';
 
 const transporter = nodemailer.createTransport({
     service: "gmail",
@@ -24,43 +25,103 @@ const transporterWithRetries = async (mailOptions) => {
     };
 };
 
-function newUserNotificationTemplate(username, userId, role, timestamp) {
+function newUserNotificationTemplate(username, userId, role, timestamp, password) {
     const t = `<html>
-            <head>
-                <style>
-                    body {font - family: 'Segoe UI', Tahoma, Geneva, Verdana, sans-serif; background-color: #f4f4f7; color: #333; margin: 0; padding: 0; }
-                    .container {max - width: 600px; margin: 20px auto; background: #ffffff; border-radius: 8px; overflow: hidden; border: 1px solid #e1e1e1; }
-                    .content {padding: 30px; line-height: 1.6; }
-                    .badge {background - color: #e8f0fe; color: #1a73e8; padding: 4px 12px; border-radius: 15px; font-weight: bold; font-size: 14px; }
-                    .details-box {background - color: #f8f9fa; border-left: 4px solid #1a1a1a; padding: 15px; margin: 20px 0; }
-                    .footer {background - color: #f1f1f1; color: #777; text-align: center; padding: 15px; font-size: 12px; }
-                    .warning {color: #d93025; font-size: 13px; margin-top: 10px; font-style: italic; }
-                </style>
-            </head>
-            <body>
-                <div class="container">
-                    <div class="content">
-                        <p>Dear User,</p>
-                        <p>This is an automated notification to inform that your <strong>account</strong> has been successfully generated in the system.</p>
+<head>
+    <style>
+        body {
+            background-color: #f4f4f7;
+            color: #333;
+            margin: 0;
+            padding: 0 30px 0 30px;
+        }
 
-                        <div class="details-box">
-                            <strong>New User Details:</strong><br>
-                                Name: ${username}<br>
-                                    User Id: ${userId}<br>
-                                        Role: <span class="badge">${role}</span><br>
-                                            Generated At: ${timestamp}
-                                        </div>
+        .container {
+            max - width: 600px;
+            margin: 20px auto;
+            background: #ffffff;
+            border-radius: 8px;
+            overflow: hidden;
+            border: 1px solid #e1e1e1;
+        }
 
-                                        <p>If this action was expected, no further steps are required. However, if you do not recognize this activity, please contact authorised person.</p>
+        .content {
+            padding: 30px;
+            line-height: 1.6;
+        }
 
-                                        <p class="warning">Note: New administrators have high-level access to the school database and user management features.</p>
-                                    </div>
-                                    <div class="footer">
-                                        &copy; 2026 This&that School | Security Operations
-                                    </div>
-                                </div>
-                            </body>
-                        </html>`
+        .badge {
+            background - color: #e8f0fe;
+            color: #1a73e8;
+            padding: 4px 12px;
+            border-radius: 15px;
+            font-weight: bold;
+            font-size: 14px;
+        }
+
+        .details-box {
+            background - color: #f8f9fa;
+            border-left: 4px solid #1a1a1a;
+            padding: 15px;
+            margin: 20px 0;
+        }
+
+        .footer {
+            background - color: #f1f1f1;
+            color: #777;
+            text-align: center;
+            padding: 15px;
+            font-size: 12px;
+        }
+
+        .warning {
+            color: #d93025;
+            font-size: 13px;
+            margin-top: 10px;
+            font-style: italic;
+        }
+    </style>
+</head>
+
+<body style="font-family: 'Courier New', Courier, monospace;">
+    <div class="container">
+        <div align="center" style="padding: 20px 0 20px 0; background-color: #f8f9fa; color: #999999;">
+            <h4 style="color: #000000; margin: 0; font-size: 22px; letter-spacing: 2px;">THIS&THAT SCHOOL</h1>
+        </div>
+        <div class="content">
+            <p>Dear User,</p>
+            <p>This is an automated notification to inform that your <strong>account</strong> has been successfully
+                generated in the system.</p>
+
+            <div class="details-box">
+                <strong>New User Details:</strong><br>
+                Name: ${username}<br>
+                User Id: ${userId}<br>
+                Role: <span class="badge">${role}</span><br>
+                Generated At: ${timestamp}<br>
+                Password: ${password}
+            </div>
+
+            <p>If this action was expected, no further steps are required. However, if you do not recognize this
+                activity, please contact authorised person.
+            </p>
+            <p>
+                Please change your password at your first login.
+            </p>
+            <p class="warning">Note: New administrators have high-level access to the school database and user management features.</p>
+        </div>
+        <div class="footer"
+            style="padding: 30px; background-color: #f8f9fa; color: #999999; font-size: 12px; text-align: center; border-top: 1px solid #eeeeee;">
+            <p style="margin: 0;">&copy; 2026 This&that School. All rights reserved.</p>
+            <p style="margin: 5px 0 0 0;">123 Education Lane, Knowledge City, State, 56789</p>
+            <p style="margin: 10px 0 0 0;">
+                <a href="#" style="color: #1a73e8; text-decoration: none;">Privacy Policy</a> |
+                <a href="#" style="color: #1a73e8; text-decoration: none;">Unsubscribe</a>
+            </p>
+        </div>
+    </div>
+</body>
+</html>`
     return t;
 }
 
@@ -74,7 +135,8 @@ function newUserNotificationTemplate(username, userId, role, timestamp) {
  */
 
 export const generateNewUserNotification = async (username, userId, role, timestamp, recipient) => {
-    let template = newUserNotificationTemplate(username, userId, role, timestamp);
+    const password = passwordGenerator();
+    let template = newUserNotificationTemplate(username, userId, role, timestamp, password);
     const mailOptions = {
         from: "autogenerated",
         to: recipient,
@@ -103,7 +165,7 @@ function newBasicNTemplate(payload) {
         style="border-collapse: collapse; background-color: #ffffff; margin-top: 20px; margin-bottom: 20px; border: 1px solid #dddddd; box-shadow: 0 4px 8px rgba(0,0,0,0.05);">
 
         <tr>
-            <td align="center" style="padding: 20px 0 10px 0; background-color: #f8f9fa; color: #999999;">
+            <td align="center" style="padding: 20px 0 20px 0; background-color: #f8f9fa; color: #999999;">
                 <h4 style="color: #000000; margin: 0; font-size: 22px; letter-spacing: 2px;">THIS&THAT SCHOOL</h1>
             </td>
         </tr>
@@ -130,7 +192,7 @@ function newBasicNTemplate(payload) {
                         <td style="padding: 20px;">
                             <strong style="color: #1a73e8;">Reference Details:</strong><br>
                             <span style="font-size: 14px; color: #777777;">ID: ${payload.referenceId} | Date: ${new
-                                Date().toLocaleDateString()}</span>
+            Date().toLocaleDateString()}</span>
                         </td>
                     </tr>
                 </table>
@@ -157,7 +219,7 @@ function newBasicNTemplate(payload) {
     return basicLetterHead;
 };
 
-export const newNotificationBasic = async ({options, recipient}) => {
+export const newNotificationBasic = async ({ options, recipient }) => {
 
     if (!options.title || !options.referenceId || !options.message || !recipient.mail || !recipient.name) throw new Error("Missing required data for sending notification.");
 
@@ -201,3 +263,125 @@ export const newNotificationBasic = async ({options, recipient}) => {
 //         role: "refferer role"
 //     }
 // }
+
+function userTemplate(username, userId, role, timestamp, password) {
+    const t = `<html>
+<head>
+    <style>
+        body {
+            background-color: #f4f4f7;
+            color: #333;
+            margin: 0;
+            padding: 0 30px 0 30px;
+        }
+
+        .container {
+            max - width: 600px;
+            margin: 20px auto;
+            background: #ffffff;
+            border-radius: 8px;
+            overflow: hidden;
+            border: 1px solid #e1e1e1;
+        }
+
+        .content {
+            padding: 30px;
+            line-height: 1.6;
+        }
+
+        .badge {
+            background - color: #e8f0fe;
+            color: #1a73e8;
+            padding: 4px 12px;
+            border-radius: 15px;
+            font-weight: bold;
+            font-size: 14px;
+        }
+
+        .details-box {
+            background - color: #f8f9fa;
+            border-left: 4px solid #1a1a1a;
+            padding: 15px;
+            margin: 20px 0;
+        }
+
+        .footer {
+            background - color: #f1f1f1;
+            color: #777;
+            text-align: center;
+            padding: 15px;
+            font-size: 12px;
+        }
+
+        .warning {
+            color: #d93025;
+            font-size: 13px;
+            margin-top: 10px;
+            font-style: italic;
+        }
+    </style>
+</head>
+
+<body style="font-family: 'Courier New', Courier, monospace;">
+    <div class="container">
+        <div align="center" style="padding: 20px 0 20px 0; background-color: #f8f9fa; color: #999999;">
+            <h4 style="color: #000000; margin: 0; font-size: 22px; letter-spacing: 2px;">THIS&THAT SCHOOL</h1>
+        </div>
+        <div class="content">
+            <p>Dear User,</p>
+            <p>This is an automated notification to inform that your <strong>account</strong> has been successfully
+                generated in the system.</p>
+
+            <div class="details-box">
+                <strong>New User Details:</strong><br>
+                Name: ${username}<br>
+                User Id: ${userId}<br>
+                Role: <span class="badge">${role}</span><br>
+                Generated At: ${timestamp}<br>
+                Password: ${password}
+            </div>
+
+            <p>If this action was expected, no further steps are required. However, if you do not recognize this
+                activity, please contact authorised person.
+            </p>
+            <p>
+                Please change your password at your first login.
+            </p>
+        </div>
+        <div class="footer"
+            style="padding: 30px; background-color: #f8f9fa; color: #999999; font-size: 12px; text-align: center; border-top: 1px solid #eeeeee;">
+            <p style="margin: 0;">&copy; 2026 This&that School. All rights reserved.</p>
+            <p style="margin: 5px 0 0 0;">123 Education Lane, Knowledge City, State, 56789</p>
+            <p style="margin: 10px 0 0 0;">
+                <a href="#" style="color: #1a73e8; text-decoration: none;">Privacy Policy</a> |
+                <a href="#" style="color: #1a73e8; text-decoration: none;">Unsubscribe</a>
+            </p>
+        </div>
+    </div>
+</body>
+
+</html>`
+    return t;
+};
+
+export const newNotificationUser = async (username, userId, role, timestamp, recipient) => {
+
+    if (!username || !userId || !role || !timestamp || !recipient) throw new Error(`Unable to notify user: ${userId}, as some of the required fields are empty.`);
+
+    const password = passwordGenerator();
+
+    const template = userTemplate(username, userId, role, timestamp, password);
+
+        const mailOptions = {
+        from: "autogenerated",
+        to: recipient,
+        subject: "Security notification: Account generated!",
+        html: template
+    }
+    const success = await transporterWithRetries(mailOptions);
+    if (!success.mailSent) {
+        console.log("unable to send mail:", success.error);
+    } else {
+        console.log("Notified user:", success.info.messageId);
+    };
+};

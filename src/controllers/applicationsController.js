@@ -1,16 +1,15 @@
 import { logger } from '../utils/logger.js';
-
-import newApplication from '../models/newApplication.js';
-import nHistory from '../models/notificationHistory.js';
+import applicationHistory from '../models/applicationHistory.js'
 import { newNotificationBasic } from '../utils/mailNotificationService.js';
 import mongoose from 'mongoose';
+import studentApplication from '../models/studentApplication.js';
+import student from '../models/student.js';
 
 const validRoles = ['student', 'teacher', 'parent', 'backoffice'];
 
-export const newApplicationHandler = async (req, res) => {
-    // Extract the application from the request body.
-    const applicationModel = req.body || {};
-    if (!applicationModel) {
+export async function studentApplicationHandler(req, res) {
+    const application = req.body || {};
+    if (!application) {
         return res.status(400).json({
             success: false,
             status: 400,
@@ -24,9 +23,7 @@ export const newApplicationHandler = async (req, res) => {
             }
         });
     };
-    // Extract role from from the application model.
-    const applicantRole = applicationModel.role || null;
-    // Check if the role is valid;
+    const applicantRole = application?.role
     if (!validRoles.includes(applicantRole)) {
         return res.status(400).json({
             success: false,
@@ -41,16 +38,51 @@ export const newApplicationHandler = async (req, res) => {
             }
         });
     };
-    // Start processing the application.
+    const tSession = await mongoose.startSession();
     try {
-        const application = new newApplication(applicationModel);
-        await application.save();
-        const acknowledgement = application;
+        tSession.startTransaction();
+        const newSApplication = new studentApplication(application);
+        await newSApplication.save({
+            session: tSession
+        });
+        const acknowledgement = newSApplication;
+        const nTitle = "Application Received";
+        const nMessage = `Your application has been received with the reference number: ${acknowledgement.appRef}`;
+        const applicationHistory = new applicationHistory({
+            title: nTitle,
+            recipient: {
+                appRef: acknowledgement.appRef,
+                name: acknowledgement.name,
+                mail: acknowledgement.email,
+                role: acknowledgement.role
+            },
+            message: nMessage,
+            referrer: {
+                userId: "PUBLIC",
+                role: "PUBLICK"
+            }
+        });
+        await applicationHistory.save({ session: tSession });
+        const nReference = applicationHistory.referenceId;
+        const notificationPayload = {
+            options: {
+                referenceId: nReference,
+                title: nTitle,
+                message: nMessage
+            },
+            recipient: {
+                name: acknowledgement.name,
+                mail: acknowledgement.email,
+                role: acknowledgement.role
+            }
+        };
+        await tSession.commitTransaction();
+        newNotificationBasic(notificationPayload);
         logger({
             level: 'info',
             origin: 'mainService',
-            originName: 'draftStudentApplicationController',
-            message: 'new application draft created!',
+            originName: 'applicationsController',
+            message: 'new Student application draft created!',
             metadata: {
                 orderId: acknowledgement.appRef
             }
@@ -123,33 +155,29 @@ export const newApplicationHandler = async (req, res) => {
                 version: "v1.0.0"
             }
         });
+    } finally {
+        await tSession.endSession();
     };
 };
 
-export const getApplications = async (req, res) => {
+export async function getStudentApplications(req, res) {
     // Extract filtering options from queries.
-    const { isVerified, role, status } = req.query;
+    const { role, status } = req.query;
     let filter = {};
     // Add role filter to the search query.
     if (role) {
         filter.role = role;
     };
-    // Add isVerified filer to the search query.
-    if (isVerified === 'true') {
-        filter.isAppVerified = true;
-    } else {
-        filter.isAppVerified = false;
-    };
     // add status filter to the filters list.
     if (status) {
-        const validStatus = ["ACCEPTED", "REJECTED", "DRAFT", "PROCESSING"];
+        const validStatus = ["DRAFT", "PROCESSING", "VERIFIED", "REJECTED", "ACCEPTED", "KYC"];
         if (validStatus.includes(status.toUpperCase())) {
-            filter.appStatus = status.toUpperCase()
+            filter["status.state"] = status.toUpperCase()
         };
     };
     try {
         // Find applications in the server.
-        const applications = await newApplication.find(filter).sort({ createdAt: -1 });
+        const applications = await studentApplication.find(filter).sort({ createdAt: -1 });
         // Error is applications not found.
         if (applications.length <= 0) {
             return res.status(404).json({
@@ -175,7 +203,8 @@ export const getApplications = async (req, res) => {
                 username: app.name,
                 fatherName: app.fatherName,
                 email: app.email,
-                phone: app.address.phoneNumber
+                phone: app.address.phoneNumber,
+                status: app.appStatus
             };
             responseApplications.push(entry);
         };
@@ -197,8 +226,6 @@ export const getApplications = async (req, res) => {
             origin: 'mainService',
             originName: 'newApplicationsController',
             message: 'Unexpected error while fetching applications',
-            metadata: {
-            },
             stackTrace: error.message
         });
         res.status(500).json({
@@ -216,13 +243,13 @@ export const getApplications = async (req, res) => {
     };
 };
 
-export const getApplication = async (req, res) => {
+export async function getStudentApplication(req, res) {
     // Extract userId from the param.
     const reference = req.params?.appRef;
     // Process userId.
     try {
         // Find the requested application from the database.
-        const application = await newApplication.findOne({ appRef: reference });
+        const application = await studentApplication.findOne({ appRef: reference });
         // Respond with error if application was not found.
         if (!application) {
             return res.status(404).json({
@@ -241,14 +268,18 @@ export const getApplication = async (req, res) => {
         // Define payload for sending to user.
         const rPayload = {
             appRef: application.appRef,
-            appStatus: application.appStatus,
+            status: application.status,
             name: application.name,
             gender: application.gender,
             fatherName: application.fatherName,
             motherName: application.motherName,
             address: application.address,
+            phone: application.phoneNumber,
             email: application.email,
-            role: application.role
+            role: application.role,
+            kyc: application.kyc,
+            standard: application.standard,
+            dob: application.dob
         }
         // Return the payload to the client.
         res.json({
@@ -353,7 +384,7 @@ export const applicationReview = async (req, res) => {
         const nTitle = "Application Under Review.";
         const nMessage = `Your application with reference: ${appRef}, is under review. After performing required validation you will be notified with the application status.`;
         // Create a new notification history.
-        const notificationHistory = new nHistory({
+        const applicationHistory = new applicationHistory({
             title: nTitle,
             recipient: {
                 appRef: appRef,
@@ -368,9 +399,9 @@ export const applicationReview = async (req, res) => {
             }
         });
         // Save it to database.
-        await notificationHistory.save({ session });
+        await applicationHistory.save({ session });
         // extract referenceId from the new history db document.
-        const nReference = notificationHistory.referenceId;
+        const nReference = applicationHistory.referenceId;
         // Define paylad for notifier.
         const notificationPayload = {
             options: {
@@ -412,6 +443,9 @@ export const applicationReview = async (req, res) => {
             originName: 'newApplicationsController',
             message: 'Unexpected error while forwarding application for review.',
             metadata: {
+                userId: refferer.id,
+                orderId: appRefe,
+                userType: refferer.role
             },
             stackTrace: error.message
         });
@@ -476,7 +510,7 @@ export const applicationReject = async (req, res) => {
     try {
         // Start the database transaction.
         tSession.startTransaction();
-        const application = await newApplication.findOne({ appRef: applicationReference }, null, { tSession });
+        const application = await newApplication.findOne({ appRef: applicationReference }, null, { session: tSession });
         // Check if the session exists.
         if (!application) {
             return res.status(404).json({
@@ -536,12 +570,12 @@ export const applicationReject = async (req, res) => {
             });
         };
         // update the status.
-        await newApplication.findOneAndUpdate({ appRef: applicationReference }, { appStatus: "REJECTED" }, { tSession });
+        await newApplication.findOneAndUpdate({ appRef: applicationReference }, { appStatus: "REJECTED" }, { session: tSession });
         // Define configurations for notification.
         const nTitle = "Application Rejected";
         const nMessage = `Your application with the reference id: ${application.appRef}, has been rejected due to the following reason(s). ${reasonForRejection}`;
         // Create a new notification history.
-        const notificationHistory = new nHistory({
+        const applicationHistory = new applicationHistory({
             title: nTitle,
             recipient: {
                 appRef: application.appRef,
@@ -556,9 +590,9 @@ export const applicationReject = async (req, res) => {
             }
         });
         // Save it to database.
-        await notificationHistory.save({ tSession });
+        await applicationHistory.save({ session: tSession });
         // extract referenceId from the new history db document.
-        const nReference = notificationHistory.referenceId;
+        const nReference = applicationHistory.referenceId;
         // Define paylad for notifier.
         const notificationPayload = {
             options: {
@@ -599,6 +633,9 @@ export const applicationReject = async (req, res) => {
             originName: 'newApplicationsController',
             message: 'Unexpected error while trying to reject application.',
             metadata: {
+                userId: referer.id,
+                orderId: applicationReference,
+                userType: referer.role
             },
             stackTrace: error.message
         });
@@ -609,6 +646,150 @@ export const applicationReject = async (req, res) => {
             error: {
                 code: "INTERNAL_ERROR",
                 message: "Unexpected error occured while rejecting application."
+            },
+            metadata: {
+                server_time: Date.now(),
+                version: "v1.0.0"
+            }
+        });
+    } finally {
+        // Finally close the mongoose session.
+        await tSession.endSession();
+    };
+};
+
+export const applicationVerify = async (req, res) => {
+    const referer = req?.user;  // Extract user object forwarded from the authenticator.
+    const applicationReference = req.params?.appRef; // Extract application reference number from the url.
+    // Cross check if appRef if provided.
+    if (!applicationReference) {
+        return res.status(400).json({
+            success: false,
+            status: 400,
+            error: {
+                code: "INVALID_DATA",
+                message: "Application reference required."
+            },
+            metadata: {
+                server_time: Date.now(),
+                version: "v1.0.0"
+            }
+        });
+    };
+    const tSession = await mongoose.startSession();  // Create mongoose session for safe db queries.
+    try {
+        tSession.startTransaction(); // Start db transaction.
+        const application = await newApplication.findOne({ appRef: applicationReference }, null, { session: tSession }); // Find the application from database.
+        if (!application) {
+            return res.status(404).json({
+                success: false,
+                status: 404,
+                error: {
+                    code: "NOT_FOUND",
+                    message: "Application not found."
+                },
+                metadata: {
+                    server_time: Date.now(),
+                    version: "v1.0.0"
+                }
+            });
+        };
+        if (application.appStatus !== "PROCESSING") {
+            return res.status(400).json({
+                success: false,
+                status: 400,
+                error: {
+                    code: "INVALID_ACTION",
+                    message: "Application yet to be processed, rejected or already accepted."
+                },
+                metadata: {
+                    server_time: Date.now(),
+                    version: "v1.0.0"
+                }
+            });
+        };
+        const vData = {
+            'identityDoc.isVerified': true,
+            isAppVerified: true,
+            verifiedBy: referer.id,
+            appStatus: 'VERIFIED'
+        }
+        await newApplication.findOneAndUpdate({ appRef: applicationReference }, { $set: vData }, { session: tSession, new: true }); // Update the data as verified.
+        // Define configuration for notification.
+        const nTitle = "Application Verified";
+        const nMessage = `Your application with the reference id: ${application.appRef}, has passed the final verification process.`;
+        // Create a new notification history.
+        const applicationHistory = new applicationHistory({
+            title: nTitle,
+            recipient: {
+                appRef: application.appRef,
+                name: application.name,
+                mail: application.email,
+                role: application.role
+            },
+            message: nMessage,
+            referrer: {
+                userId: referer.id,
+                role: referer.role
+            }
+        });
+        // Save it to database.
+        await applicationHistory.save({ session: tSession });
+        // extract referenceId from the new history db document.
+        const nReference = applicationHistory.referenceId;
+        // Define paylad for notifier.
+        const notificationPayload = {
+            options: {
+                referenceId: nReference,
+                title: nTitle,
+                message: nMessage
+            },
+            recipient: {
+                name: application.name,
+                mail: application.email,
+                role: application.role
+            }
+        };
+        // Commit all the db queries performed above.
+        await tSession.commitTransaction();
+        // Send a notification to the user without awaiting for success.
+        newNotificationBasic(notificationPayload);
+        // Respond with success.
+        res.json({
+            success: true,
+            status: 200,
+            data: {
+                appRef: application.appRef,
+                message: "Application verified."
+            },
+            metadata: {
+                server_time: Date.now(),
+                version: "v1.0.0"
+            }
+        });
+    } catch (error) {
+        // Abort the db transaction performed above if anything goes wrong.
+        await tSession.abortTransaction();
+        // Log the error to the database.
+        logger({
+            level: 'error',
+            origin: 'mainService',
+            originName: 'newApplicationsController',
+            message: 'Unexpected error while verifying application.',
+            metadata: {
+                userId: referer.id,
+                orderId: applicationReference,
+                userType: referer.role
+            },
+            stackTrace: error.message
+        });
+        // Respond with error.
+        res.status(500).json({
+            success: false,
+            status: 500,
+            error: {
+                code: "INTERNAL_ERROR",
+                message: "Unexpected error occured while verifying application."
             },
             metadata: {
                 server_time: Date.now(),

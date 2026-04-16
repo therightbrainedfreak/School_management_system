@@ -13,3 +13,44 @@ my-express-app/
 ├── .gitignore
 ├── package.json
 └── index.js              # Entry point to start the server
+
+Student application process
+step 1. Application Form > ARN Generation ( Future actions will be based on the ARN ).
+step 2. Aadhar Paperless Kyc.
+step 3. Physical verification.
+step 4. Payment.
+step 5. Final Account Generation.
+
+Student schema requirements.
+
+name
+fatherName
+motherName
+dob
+gender
+standard
+role
+address >
+    houseNo
+    street
+    district
+    state
+    postcode
+    country
+phoneNumber
+email
+appointment >
+    state
+    appointmentId
+status >
+    state
+    note
+payment >
+    state
+    mode
+    date
+kyc >
+    docType
+    docNumber
+    state
+    note
