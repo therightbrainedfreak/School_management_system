@@ -1,7 +1,7 @@
 import mongoose from 'mongoose';
 import { generateMailRef } from "../utils/utils.js";
 
-const applicationHistorySchema = new mongoose.Schema({
+const applicationLogSchema = new mongoose.Schema({
     referenceId: { type: String, required: true, unique: true },
     title: { type: String, required: true },
     recipient: {
@@ -18,13 +18,13 @@ const applicationHistorySchema = new mongoose.Schema({
     createdAt: { type: Date, default: Date.now }
 });
 
-applicationHistorySchema.pre('validate', function() {
+applicationLogSchema.pre('validate', function() {
     if (this.isNew && !this.referenceId) {
         let genId = generateMailRef();
         this.referenceId = genId;
     };
 });
 
-const applicationHistory = mongoose.model('applicationHistory', applicationHistorySchema);
+const applicationLog = mongoose.model('applicationLog', applicationLogSchema);
 
-export default applicationHistory;
+export default applicationLog;

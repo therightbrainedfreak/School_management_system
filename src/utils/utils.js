@@ -43,8 +43,15 @@ export const generateMailRef = () => {
 };
 
 export const passwordGenerator = () => {
-const int = "23456789ABCDEFGHJKMNPQRSTUVWXYZabcdefghjkmnpqrstuvwxyz@#/%";
+    const int = "23456789ABCDEFGHJKMNPQRSTUVWXYZabcdefghjkmnpqrstuvwxyz@#/%";
     const rInt = customAlphabet(int, 12);
     const generateId = rInt();
     return generateId;
 };
+
+export const generateKycId = () => {
+    const int = "23456789ABCDEFGHJKMNPQRSTUVWXYZabcdefghjkmnpqrstuvwxyz";
+    const rInt = customAlphabet(int, 32);
+    const generateId = rInt();
+    return generateId;
+}

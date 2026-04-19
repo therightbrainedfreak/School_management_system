@@ -1,17 +1,25 @@
 import path, { dirname } from 'node:path';
-import fs from 'node:fs';
-import AdmZip from 'adm-zip';
 import { fileURLToPath } from 'node:url';
-import xpath from 'xpath';
 import { DOMParser } from '@xmldom/xmldom';
 import { SignedXml } from 'xml-crypto';
+
+import fs from 'node:fs';
+import AdmZip from 'adm-zip';
+import xpath from 'xpath';
 
 const __filename = fileURLToPath(import.meta.url);
 const __dirname = dirname(__filename);
 
 const localAadharPath = path.join(__dirname, "../", "offlineaadhaar20260411050834251.zip");
 
-function extractAadharXmlFromLocalFile(path, password) {
+/**
+ * Extracts xml from aadhar zip.
+ * @param {string} path Path to the saved zip aadhar.
+ * @param {*} password Password or sharecode for unlocking the encrypted aadhar zip.
+ * @returns Xml as a String.
+ */
+
+export function extractAadharXmlFromLocalFile(path, password) {
     try {
         // Input validations.
         if (!path) throw new Error("Path not specified.");
@@ -23,19 +31,43 @@ function extractAadharXmlFromLocalFile(path, password) {
         // Check if the zip contains a xml file.
         const xmlEntry = zipEntries.find(entry => entry.entryName.endsWith('.xml'));
 
-        if (!xmlEntry) throw new Error("No XMl file found in the ZIP.");
+        if (!xmlEntry) {
+            return {
+                success: false,
+                message: "No XMl file found in the ZIP."
+            }
+        }
+
         // Decode the xml using password.
         const xmlBuffer = zip.readFile(xmlEntry, password);
-        if (!xmlBuffer || !xmlBuffer.includes('<?xml')) throw new Error("Invalid password or corrupted ZIP.");
 
-        return xmlBuffer.toString('utf-8');
+        if (!xmlBuffer || !xmlBuffer.includes('<?xml')) {
+            return {
+                success: false,
+                message: "Corrupted File."
+            }
+        }
+
+        return {
+            success: true,
+            data: xmlBuffer.toString('utf-8')
+        }
 
     } catch (error) {
-        throw new Error(`Extractions halted: ${error.message}`);
+        return {
+            success: false,
+            message: error.message
+        }
     };
 };
 
-function verifyXML(XMLString) {
+/**
+ * Verify the hash / integrity of the aadhar string using the inbuild pem certificate.
+ * @param {string} XMLString Complete aadhar xml
+ * @returns success true and isVerified true if the aadhar's integrity is cerified else return success false with the error.
+ */
+
+export function verifyXML(XMLString) {
     try {
         if (!XMLString) throw new Error("XML string not found.");
         
@@ -43,10 +75,21 @@ function verifyXML(XMLString) {
 
         const signNode = xpath.select("//*[local-name(.)='Signature']", doc)[0];
 
-        if (!signNode) throw new Error("No signature element in XML.");
+        if (!signNode) {
+            return {
+                status: false,
+                message: "Signature not found in the XML."
+            }
+        }
 
         const certNode = xpath.select("//*[local-name(.)='X509Certificate']", doc)[0];
-        if (!certNode) throw new Error("No X509Certificate found in XML.");
+
+        if (!certNode) {
+            return {
+                status: false,
+                message: "Cannot find X509Certificate in the XML"
+            }
+        }
 
         const b64 = certNode.textContent.replace(/\s+/g, '')
         const pem = `-----BEGIN CERTIFICATE-----\n${b64.match(/.{1,64}/g).join('\n')}\n-----END CERTIFICATE-----`
@@ -56,16 +99,30 @@ function verifyXML(XMLString) {
         sig.loadSignature(signNode)
 
         const valid = sig.checkSignature(XMLString)
-        if (!valid) throw new Error(`Signature invalid: ${sig.validationErrors.join(', ')}`)
 
-        return { valid: true };
+        if (!valid) {
+            return {
+                status: false,
+                message: `Signature invalid: ${sig.validationErrors.join(', ')}`
+            }
+        }
 
+        return {
+            status: true,
+            message: "Signature valid."
+        };
     } catch (error) {
-        throw new Error(`Cannot verify: ${error.message}`);
+        throw new Error('Cannot verify:', error);
     };
 };
 
-function extractKycData(xmlString) {
+/**
+ * Extracts POI, POA data from the xml string.
+ * @param {string} xmlString Complete aadhar xml.
+ * @returns Object containing all kyc fields.
+ */
+
+export function extractKycData(xmlString) {
     const doc = new DOMParser().parseFromString(xmlString, 'application/xml');
 
     const root = doc.getElementsByTagName('OfflinePaperlessKyc')[0];
@@ -99,18 +156,18 @@ function extractKycData(xmlString) {
     };
 };
 
-function main() {
-    try {
-        const XMLString = extractAadharXmlFromLocalFile(localAadharPath, 3648);
+// function main() {
+//     try {
+//         const XMLString = extractAadharXmlFromLocalFile(localAadharPath, 3648);
 
-        const result = verifyXML(XMLString);
+//         const result = verifyXML(XMLString);
 
-        const kyc = extractKycData(XMLString);
+//         const kyc = extractKycData(XMLString);
 
-        console.log(result);
-    } catch (error) {
-        console.log(error.message)
-    }
-};
+//         console.log(result);
+//     } catch (error) {
+//         console.log(error.message)
+//     }
+// };
 
 // fs.writeFileSync('photo.jpg', Buffer.from(kyc.photoBase64, 'base64'));

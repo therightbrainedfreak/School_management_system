@@ -3,10 +3,9 @@ import { Router } from "express";
 import {
     getStudentApplications,
     getStudentApplication,
-    applicationReview,
-    applicationReject,
-    applicationVerify,
-    studentApplicationHandler
+    studentApplicationHandler,
+    uploadKycDoc,
+    finalKyc
 } from "../controllers/applicationsController.js";
 
 import { authenticate } from "../middlewares/authenticator.js";
@@ -14,16 +13,22 @@ import { authorise } from "../middlewares/authoriser.js";
 
 const route = Router();
 
-route.post('/studentApplication', studentApplicationHandler);
+route.post('/student_applications', studentApplicationHandler);
 
-route.get('/applications', authenticate, authorise('admin', 'superuser'), getStudentApplications);
+route.post('/student_applications/:appRef/uploadKyc', uploadKycDoc);
 
-// route.get('/applications/:appRef', authenticate, authorise["admin", "superuser"], getStudentApplication);
+route.post('/student_applications/:appRef/kyc', finalKyc);
 
-route.post('/applications/:appRef/review', authenticate, authorise('admin', 'superuser'), applicationReview);
+route.get('/student_applications', authenticate, authorise('admin', 'superuser'), getStudentApplications);
 
-route.post('/applications/:appRef/reject', authenticate, authorise('admin', 'superuser'), applicationReject);
+route.get('/student_applications/:appRef', authenticate, authorise("admin", "superuser"), getStudentApplication);
 
-route.post('/applications/:appRef/verify', authenticate, authorise('admin', 'superuser'), applicationVerify);
+// Paused work for below routes
+
+// route.post('/studentApplications/:appRef/review', authenticate, authorise('admin', 'superuser'), applicationReview);
+
+// route.post('/studentApplications/:appRef/reject', authenticate, authorise('admin', 'superuser'), applicationReject);
+
+// route.post('/studentApplications/:appRef/verify', authenticate, authorise('admin', 'superuser'), applicationVerify);
 
 export default route;

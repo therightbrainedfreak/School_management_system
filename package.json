@@ -24,6 +24,7 @@
     "jsonwebtoken": "^9.0.3",
     "mongoose": "^9.2.4",
     "mongoose-unique-validator": "^6.1.0",
+    "multer": "^2.1.1",
     "nanoid": "^5.1.6",
     "node-cron": "^4.2.1",
     "nodemailer": "^8.0.2",
