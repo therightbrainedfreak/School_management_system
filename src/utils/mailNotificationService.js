@@ -2,6 +2,7 @@ import 'dotenv/config';
 import nodemailer from 'nodemailer';
 import { passwordGenerator } from './utils.js';
 
+// Define nodemailer configuration.
 const transporter = nodemailer.createTransport({
     service: "gmail",
     auth: {
@@ -9,6 +10,12 @@ const transporter = nodemailer.createTransport({
         pass: process.env.MAIL_PASS
     }
 });
+
+/**
+ * Send a mail using nodemailer with three retries if one fails.
+ * @param {Object} mailOptions Mail options e.g., recipient, html template, sender & subject.
+ * @returns Status whether the mail is sent or not.
+ */
 
 const transporterWithRetries = async (mailOptions) => {
     const MAX_RETRIES = 3;
@@ -131,7 +138,7 @@ function newUserNotificationTemplate(username, userId, role, timestamp, password
  * @param {string} role 
  * @param {string} timestamp 
  * @param {string} recipient 
- * @returns {null} Notifies the provided user about his new account that was created on the system.
+ * @returns Notifies the provided user about his new account that was created on the system.
  */
 
 export const generateNewUserNotification = async (username, userId, role, timestamp, recipient) => {
@@ -151,118 +158,118 @@ export const generateNewUserNotification = async (username, userId, role, timest
     };
 };
 
-function newBasicNTemplate(payload) {
+/**
+ * Creates a notification template for user.
+ * @param {string} title 
+ * @param {string} message 
+ * @param {string} username 
+ * @param {string} referenceId 
+ * @returns The complete Html template
+ */
+
+function newBasicNTemplate(title, message, username, referenceId, extras) {
     const basicLetterHead = `<head>
-    <meta charset="UTF-8">
-    <meta name="viewport" content="width=device-width, initial-scale=1.0">
-    <title>Notification</title>
-</head>
+                                <meta charset="UTF-8">
+                                <meta name="viewport" content="width=device-width, initial-scale=1.0">
+                                <title>Notification</title>
+                            </head>
+                            
+                            <body
+                                style="margin: 0; padding: 0; font-family: Courier New, Courier, monospace, Tahoma, Geneva, Verdana, sans-serif; background-color: #f4f4f4;">
+                            
+                                <table align="center" border="0" cellpadding="0" cellspacing="0" width="600"
+                                    style="border-collapse: collapse; background-color: #ffffff; margin-top: 20px; margin-bottom: 20px; border: 1px solid #dddddd; box-shadow: 0 4px 8px rgba(0,0,0,0.05);">
+                            
+                                    <tr>
+                                        <td align="center" style="padding: 20px 0 20px 0; background-color: #f8f9fa; color: #999999;">
+                                            <h4 style="color: #000000; margin: 0; font-size: 22px; letter-spacing: 2px;">THIS&THAT SCHOOL</h1>
+                                        </td>
+                                    </tr>
+                            
+                                    <tr>
+                                        <td style="padding: 40px 30px 20px 30px;">
+                                            <h2
+                                                style="color: #333333; font-size: 22px; margin: 0; margin-bottom: 2px; display: inline-block; padding-bottom: 5px;">
+                                                ${title}
+                                            </h2>
+                                        </td>
+                                    </tr>
+                            
+                                    <tr>
+                                        <td style="padding: 0 30px 30px 30px; color: #555555; font-size: 16px; line-height: 1.6;">
+                                            <p>Dear ${username},</p>
+                            
+                                            <p style="margin-bottom: 20px;">
+                                                ${message}
+                                            </p>
 
-<body
-    style="margin: 0; padding: 0; font-family: Courier New, Courier, monospace, Tahoma, Geneva, Verdana, sans-serif; background-color: #f4f4f4;">
+                                            <p style="margin-bottom: 20px;">
+                                                ${extras}
+                                            </p>
 
-    <table align="center" border="0" cellpadding="0" cellspacing="0" width="600"
-        style="border-collapse: collapse; background-color: #ffffff; margin-top: 20px; margin-bottom: 20px; border: 1px solid #dddddd; box-shadow: 0 4px 8px rgba(0,0,0,0.05);">
-
-        <tr>
-            <td align="center" style="padding: 20px 0 20px 0; background-color: #f8f9fa; color: #999999;">
-                <h4 style="color: #000000; margin: 0; font-size: 22px; letter-spacing: 2px;">THIS&THAT SCHOOL</h1>
-            </td>
-        </tr>
-
-        <tr>
-            <td style="padding: 40px 30px 20px 30px;">
-                <h2
-                    style="color: #333333; font-size: 22px; margin: 0; margin-bottom: 2px; display: inline-block; padding-bottom: 5px;">
-                    ${payload.notification_title}
-                </h2>
-            </td>
-        </tr>
-
-        <tr>
-            <td style="padding: 0 30px 30px 30px; color: #555555; font-size: 16px; line-height: 1.6;">
-                <p>Dear ${payload.username},</p>
-
-                <p style="margin-bottom: 20px;">
-                    ${payload.notification_message}
-                </p>
-
-                <table width="100%" style="background-color: #f9f9f9; border-radius: 8px; border: 1px solid #eeeeee;">
-                    <tr>
-                        <td style="padding: 20px;">
-                            <strong style="color: #1a73e8;">Reference Details:</strong><br>
-                            <span style="font-size: 14px; color: #777777;">ID: ${payload.referenceId} | Date: ${new
-            Date().toLocaleDateString()}</span>
-                        </td>
-                    </tr>
-                </table>
-            </td>
-        </tr>
-
-        <tr>
-            <td
-                style="padding: 30px; background-color: #f8f9fa; color: #999999; font-size: 12px; text-align: center; border-top: 1px solid #eeeeee;">
-                <p style="margin: 0;">&copy; 2026 This&that School. All rights reserved.</p>
-                <p style="margin: 5px 0 0 0;">123 Education Lane, Knowledge City, State, 56789</p>
-                <p style="margin: 10px 0 0 0;">
-                    <a href="#" style="color: #1a73e8; text-decoration: none;">Privacy Policy</a> |
-                    <a href="#" style="color: #1a73e8; text-decoration: none;">Unsubscribe</a>
-                </p>
-            </td>
-        </tr>
-
-    </table>
-
-</body>
-
-</html>`
+                                            <table width="100%" style="background-color: #f9f9f9; border-radius: 8px; border: 1px solid #eeeeee;">
+                                                <tr>
+                                                    <td style="padding: 20px;">
+                                                        <strong style="color: #1a73e8;">Reference Details:</strong><br>
+                                                        <span style="font-size: 14px; color: #777777;">ID: ${referenceId} | Date: ${new
+                                        Date().toLocaleDateString()}</span>
+                                                    </td>
+                                                </tr>
+                                            </table>
+                                        </td>
+                                    </tr>
+                            
+                                    <tr>
+                                        <td
+                                            style="padding: 30px; background-color: #f8f9fa; color: #999999; font-size: 12px; text-align: center; border-top: 1px solid #eeeeee;">
+                                            <p style="margin: 0;">&copy; 2026 This&that School. All rights reserved.</p>
+                                            <p style="margin: 5px 0 0 0;">123 Education Lane, Knowledge City, State, 56789</p>
+                                            <p style="margin: 10px 0 0 0;">
+                                                <a href="#" style="color: #1a73e8; text-decoration: none;">Privacy Policy</a> |
+                                                <a href="#" style="color: #1a73e8; text-decoration: none;">Unsubscribe</a>
+                                            </p>
+                                        </td>
+                                    </tr>
+                            
+                                </table>
+                            
+                            </body>
+                            
+                            </html>`
     return basicLetterHead;
 };
 
-export const newNotificationBasic = async ({ options, recipient }) => {
+/**
+ * Sends a notification to the user.
+ * @param {string} title title of the mail
+ * @param {string} referenceId reference id of the application log for future use
+ * @param {string} message message for the user
+ * @param {string} mail mail address of the recipient
+ * @param {string} name username of the new applicant
+ * @param {string} extras extra email fields text / html
+ */
 
-    if (!options.title || !options.referenceId || !options.message || !recipient.mail || !recipient.name) throw new Error("Missing required data for sending notification.");
+export const newNotificationBasic = async (title, referenceId, message, mail, name, extras) => {
 
-    const payload = {
-        notification_title: options.title,
-        username: recipient.name,
-        notification_message: options.message,
-        referenceId: options.referenceId
-    };
+    if (!title || !referenceId || !message || !mail || !name) throw new Error("Missing required data for sending notification.");
+    if (!extras) {extras = ""};
 
-    const letterHead = newBasicNTemplate(payload);
+    const letterHead = newBasicNTemplate(title, message, name, referenceId, extras);
 
     const mailOptions = {
         from: "autogenerated",
-        to: recipient.mail,
+        to: mail,
         subject: "This&that School notifications",
         html: letterHead
     };
 
     const success = await transporterWithRetries(mailOptions);
     if (!success.mailSent) {
-        console.log("unable to send mail:", success.error)
+        throw new Error("unable to send mail:", success.error);
     } else {
         console.log("Notified user:", success.info.messageId);
     };
 };
-
-// const payload = {
-//     options: {
-//         title: "Application Under Review",
-//         message: "Your physical documents has been received for application reference: APP9874385273, application is under review process. You will be notified when the application is verified or rejected."
-//     },
-//     recipient: {
-//         userId: "userid",
-//         name: "Mohd riyaz",
-//         mail: "riyazmo602@gmail.com",
-//         role: "student"
-//     },
-//     referrer: {
-//         userId: "referrer",
-//         role: "refferer role"
-//     }
-// }
 
 function userTemplate(username, userId, role, timestamp, password) {
     const t = `<html>

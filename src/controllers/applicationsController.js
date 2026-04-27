@@ -1,25 +1,21 @@
 import { logger } from '../utils/logger.js';
 import { newNotificationBasic } from '../utils/mailNotificationService.js';
-
 import multer from 'multer';
 import applicationLog from '../models/applicationLog.js'
 import mongoose from 'mongoose';
 import studentApplication from '../models/studentApplication.js';
 import kycInstance from '../models/kyc.js';
-
 import path, { dirname } from 'node:path';
 import fs from 'fs/promises'
 import { fileURLToPath } from 'node:url';
-import { extractAadharXmlFromLocalFile, verifyXML, extractKycData } from './kycController.js';
-
+import XMLHandler from './kycController.js';
 import { isBefore, subMinutes } from 'date-fns';
 
 const __filename = fileURLToPath(import.meta.url);
 const __dirname = dirname(__filename);
-
 const validRoles = ['student', 'teacher', 'parent', 'backoffice'];
-
 const aadharUploadPath = path.join(__dirname, '..', '..', 'uploads', 'kyc');
+const imageUploadPath = path.join(__dirname, '..', '..', 'uploads', 'pictures');
 
 const aadharStorage = multer.diskStorage({
     destination: (req, file, cb) => {
@@ -50,6 +46,25 @@ const uploadZip = multer({
     fileFilter: zipFilter
 });
 
+// Sanitizers >> Learned from Claude.ai
+
+const sanitizeText = (val, max) => 
+    typeof val === 'string' ? val.trim().replace(/\s+/g, ' ').replace(/[^\x20-\x7E]/g, '').slice(0, max) : undefined;
+
+const sanitizeEmail = (val) => {
+    if (typeof val !== 'string') return undefined;
+    const trimmed = val.trim().toLowerCase().slice(0, 80);
+    return /^[^\s@]+@[^\s@]+\.[^\s@]+$/.test(trimmed) ? trimmed : undefined;
+};
+
+const sanitizePhone = (val) =>
+    typeof val === 'string' ? val.replace(/[^\d+]/g, '').slice(0, 15) : undefined;
+
+const sanitizeDob = (val) => {
+    const d = new Date(val);
+    return isNaN(d.getTime()) ? undefined : d.toLocaleString();
+};
+
 const uploadFileAsync = (req, res, middleware) => {
     return new Promise((resolve, reject) => {
         middleware(req, res, (err) => {
@@ -67,14 +82,14 @@ const uploadFileAsync = (req, res, middleware) => {
 };
 
 // Controller for processing he new student application.
-
-/**
- * Processes the new application for a student.
- */
-
 export async function studentApplicationHandler(req, res) {
+
+    // Extract body from the request.
     const application = req.body || {};
-    if (!application) {
+    const appKeys = Object.keys(application);
+
+    // Check for empty body.
+    if (appKeys.length === 0) {
         return res.status(400).json({
             success: false,
             status: 400,
@@ -88,7 +103,11 @@ export async function studentApplicationHandler(req, res) {
             }
         });
     };
+
+    // Extract user role from the body.
     const applicantRole = application?.role
+
+    // Validate provided role
     if (!validRoles.includes(applicantRole)) {
         return res.status(400).json({
             success: false,
@@ -103,16 +122,42 @@ export async function studentApplicationHandler(req, res) {
             }
         });
     };
+
+    // Input sanitizations for new application.
+    const appPayload = {
+        name: sanitizeText(application.name, 100),
+        fatherName: sanitizeText(application.fatherName, 100),
+        motherName: sanitizeText(application.motherName, 100),
+        dob: sanitizeDob(application.dob),
+        gender: application?.gender?.trim().slice(0, 20),
+        standard: application?.standard?.trim().slice(0, 3),
+        role: application?.role?.trim().slice(0, 20),
+        address: application?.address,
+        phoneNumber: application?.phoneNumber?.trim().slice(0, 12),
+        email: application?.email?.trim().slice(0, 80)
+    };
+
+    // Start mongoose session.
     const tSession = await mongoose.startSession();
+
     try {
+        // Start mongoose transaction.
         tSession.startTransaction();
-        const newSApplication = new studentApplication(application);
-        await newSApplication.save({
+
+        // Save the application payload to database.
+        const acknowledgement = new studentApplication(appPayload);
+        await acknowledgement.save({
             session: tSession
         });
-        const acknowledgement = newSApplication;
+        
+        // Define data for keepint track of application.
         const nTitle = "Application Received";
-        const nMessage = `Your application has been received. Reference number: ${acknowledgement.appRef}. Please complete the KYC process unless application will not be accepted.`;
+        const nMessage = `Please complete the KYC process, otherwise your application will not be accepted.`;
+
+        const extras = `<div style="border-left: 4px solid cyan; padding: 4px 0 4px 12px; margin-bottom: 8px; border-radius: 4px;">Application Reference: ${acknowledgement.appRef}</div></br>
+                        <a href="https://google.com">Proceed for KYC now</a>`;
+
+        // Create new application log.
         const appLog = new applicationLog({
             title: nTitle,
             recipient: {
@@ -127,22 +172,11 @@ export async function studentApplicationHandler(req, res) {
                 role: "SELF_APPLICANT"
             }
         });
+
+        // Save the applog to the database.
         await appLog.save({ session: tSession });
-        const nReference = appLog.referenceId;
-        const notificationPayload = {
-            options: {
-                referenceId: nReference,
-                title: nTitle,
-                message: nMessage
-            },
-            recipient: {
-                name: acknowledgement.name,
-                mail: acknowledgement.email,
-                role: acknowledgement.role
-            }
-        };
-        await tSession.commitTransaction();
-        newNotificationBasic(notificationPayload);
+
+        // Log to main logger
         logger({
             level: 'info',
             origin: 'mainService',
@@ -152,6 +186,23 @@ export async function studentApplicationHandler(req, res) {
                 orderId: acknowledgement.appRef
             }
         });
+
+        // Commit all db transactions.
+        await tSession.commitTransaction();
+
+        // NOtify
+        newNotificationBasic(nTitle, appLog.referenceId, nMessage, acknowledgement.email, acknowledgement.name, extras).catch(err => logger({
+            level: 'warn',
+            origin: 'mainService',
+            originName: 'draftApplicationsController',
+            message: 'Error notifying user.',
+            metadata: {
+                userType: 'student'
+            },
+            stackTrace: err.message
+        }));
+
+        // Respond
         res.json({
             success: true,
             status: 200,
@@ -168,7 +219,11 @@ export async function studentApplicationHandler(req, res) {
                 version: "v1.0.0"
             }
         });
+
     } catch (error) {
+        // Abort transaction.
+        await tSession.abortTransaction();
+        // Handle errors
         if (error.name === "ValidationError") {
             let errors = {};
             Object.keys(error.errors).forEach((key) => {
@@ -191,7 +246,7 @@ export async function studentApplicationHandler(req, res) {
         if (error.code === 11000) {
             return res.status(409).json({
                 success: false,
-                status: 404,
+                status: 409,
                 error: {
                     code: "DUPLICACY_ERROR",
                     message: "Application already exists."
@@ -208,14 +263,13 @@ export async function studentApplicationHandler(req, res) {
             originName: 'draftApplicationsController',
             message: 'Error creating draft student application',
             metadata: {
-                userId: 'publicroute',
                 userType: 'student'
             },
             stackTrace: error
         });
         res.status(500).json({
             success: false,
-            status: 401,
+            status: 500,
             error: {
                 code: "INTERNAL_ERROR",
                 message: "Unexpected error occured while creating new application."
@@ -420,7 +474,7 @@ export async function uploadKycDoc(req, res) {
         tSession.startTransaction();
 
         // Verify application reference number.
-        const application = studentApplication.findOne({ appRef: arn }, null, { session: tSession });
+        const application = await studentApplication.findOne({ appRef: arn }, null, { session: tSession });
         if (!application) {
             return res.status(400).json({
                 success: false,
@@ -440,8 +494,11 @@ export async function uploadKycDoc(req, res) {
         await uploadFileAsync(req, res, uploadZip.single('file'));
 
         // create a new kyc instance.
-        const newKycInstance = new kycInstance({ appRef: arn })
+        const newKycInstance = new kycInstance({ appRef: application.appRef })
         newKycInstance.save({ session: tSession });
+
+        // Update application status to kyc.
+        await studentApplication.findOneAndUpdate({ appRef: arn }, { status: { state: "KYC" } }, { session: tSession });
 
         // Commit transactions.
         await tSession.commitTransaction();
@@ -541,9 +598,11 @@ export async function finalKyc(req, res) {
         });
     };
 
+    // Start mongoose session.
     const tSession = await mongoose.startSession();
 
     try {
+        // Start mongoose transaction.
         tSession.startTransaction();
 
         // First validate the session id.
@@ -553,8 +612,8 @@ export async function finalKyc(req, res) {
                 success: false,
                 status: 400,
                 error: {
-                    code: "INVALID_DATA",
-                    message: "Provided session id is incorrect."
+                    code: "INVALID_KYC_SESSION",
+                    message: "Invalid KYC session."
                 },
                 metadata: {
                     server_time: Date.now(),
@@ -569,8 +628,8 @@ export async function finalKyc(req, res) {
                 success: false,
                 status: 400,
                 error: {
-                    code: "INVALID_DATA",
-                    message: "Provided application reference is not valid."
+                    code: "INVALID_REFERENCE",
+                    message: "Invalid reference number."
                 },
                 metadata: {
                     server_time: Date.now(),
@@ -600,7 +659,7 @@ export async function finalKyc(req, res) {
                 success: false,
                 status: 400,
                 error: {
-                    code: "SESSION_EXPIRED",
+                    code: "KYC_SESSION_EXPIRED",
                     message: "This Kyc session is expired try again."
                 },
                 metadata: {
@@ -610,15 +669,14 @@ export async function finalKyc(req, res) {
             });
         };
 
-        // Extract XML from the zip uploaded before.
-        const XML_STRING = extractAadharXmlFromLocalFile(filePath, shareCode);
-        if (!XML_STRING.success) {
-            return res.status(422).json({
+        const application = await studentApplication.findOne({ appRef: arn }, null, { session: tSession });
+        if (!application) {
+            return res.status(404).json({
                 success: false,
-                status: 422,
+                status: 404,
                 error: {
-                    code: "ERROR_PROCESSING",
-                    message: XML_STRING.message
+                    code: "NOT_FOUND",
+                    message: "Application not found."
                 },
                 metadata: {
                     server_time: Date.now(),
@@ -627,19 +685,90 @@ export async function finalKyc(req, res) {
             });
         };
 
-        // check the integrity of the xml
-        const integrityCheck = verifyXML(XML_STRING.data);
+        if (application.status.state !== "KYC") {
+            return res.status(400).json({
+                success: false,
+                status: 400,
+                error: {
+                    code: "INVALID_ACTION",
+                    message: "KYC not Initiated for the application."
+                },
+                metadata: {
+                    server_time: Date.now(),
+                    version: "v1.0.0"
+                }
+            });
+        }
 
-        if (!integrityCheck.status) {
+        // Initialise ZIP handler.
+        let zipHandler;
+        let integrity;
+        let extractedKycData;
+
+        try {
+            zipHandler = new XMLHandler(filePath, shareCode);
+        } catch (error) {
+            return res.status(422).json({
+                success: false,
+                status: 422,
+                error: {
+                    code: "ERR_EXT_XML",
+                    message: error.message
+                },
+                metadata: {
+                    server_time: Date.now(),
+                    version: "v1.0.0"
+                }
+            });
+        };
+
+        try {
+            integrity = zipHandler.verify();
+        } catch (error) {
+            return res.status(422).json({
+                success: false,
+                status: 422,
+                error: {
+                    code: "ERR_VERIFY_XML",
+                    message: error.message
+                },
+                metadata: {
+                    server_time: Date.now(),
+                    version: "v1.0.0"
+                }
+            });
+        };
+
+        try {
+            extractedKycData = zipHandler.extractData();
+        } catch (error) {
+            return res.status(422).json({
+                success: false,
+                status: 422,
+                error: {
+                    code: "ERR_EXTDATA_XML",
+                    message: error.message
+                },
+                metadata: {
+                    server_time: Date.now(),
+                    version: "v1.0.0"
+                }
+            });
+        };
+
+        if (!integrity) {
             // Delete this session.
             await kycInstance.deleteOne({ kycId: kycSessionId }, { session: tSession });
+
+            // Change kyc status to rejected.
+            await studentApplication.findOneAndUpdate({ appRef: arn }, { kyc: { state: "REJECTED", note: "Integrity check failed." } }, { session: tSession });
 
             return res.status(400).json({
                 success: false,
                 status: 400,
                 error: {
-                    code: "FAILED_VERIFICATION",
-                    message: integrityCheck.message
+                    code: "KYC_REJECTED",
+                    message: "KYC rejected as the integrity of the document cannot be verified."
                 },
                 metadata: {
                     server_time: Date.now(),
@@ -649,13 +778,13 @@ export async function finalKyc(req, res) {
         };
 
         // Extract XML data to JSON / JS Object.
-        const kycData = extractKycData(XML_STRING.data);
+        const kycData = extractedKycData;
         const POI = kycData.identity;
         const POA = kycData.address;
         const careOf = POA.careOf.replace(/^(S\/O|D\/O|W\/O|C\/O|s\/o|d\/o|w\/o|c\/o)[.:\s]*/, "").trim();
 
-        const application = await studentApplication.findOne({ appRef: arn }, null, { session: tSession }).select('kyc');
-        if (!application) throw new Error("Application that is intended to exist, not found");
+        const img = kycData.photoBase64;
+        const imgName = `${arn}_PROFILE_PIC.jpg`;
 
         // Define corrections for the application
         const updatePayload = {
@@ -669,15 +798,19 @@ export async function finalKyc(req, res) {
                 postcode: POA.pincode,
                 country: POA.country
             },
+            status: {
+                state: "PROCESSING"
+            },
             kyc: {
-                state: "VERIFIED",
-                docType: "AADHAR",
-                docNumber: application.kyc?.docNumber
+                state: "VERIFIED"
             }
         };
 
         // Update the data in database
         await studentApplication.findOneAndUpdate({ appRef: arn }, updatePayload, { session: tSession });
+
+        // Save profile picture.
+        await fs.writeFile(path.join(imageUploadPath, imgName), Buffer.from(img, 'base64'));
 
         // delete the instance after it's used.
         await kycInstance.deleteOne({ kycId: kycSessionId }, { session: tSession });
@@ -731,486 +864,3 @@ export async function finalKyc(req, res) {
         await tSession.endSession();
     };
 };
-
-// export const applicationReview = async (req, res) => {
-//     // extract reference number from url.
-//     const appRefe = req.params?.appRef;
-//     // extract referrer from the jwt token.
-//     const refferer = req.user;
-//     // check if the application reference is valid or nt undefined, more checks can be performed.
-//     if (!appRefe || appRefe === undefined) {
-//         return res.status(400).json({
-//             success: false,
-//             status: 400,
-//             error: {
-//                 code: "INVALID_DATA",
-//                 message: "Application reference not provided or invalid."
-//             },
-//             metadata: {
-//                 server_time: Date.now(),
-//                 version: "v1.0.0"
-//             }
-//         });
-//     };
-//     // Create a mongoose session for db queries.
-//     const session = await mongoose.startSession();
-//     try {
-//         // Start the database transaction.
-//         session.startTransaction();
-//         // I dont know if i am doing it right. Get the requested applicaition from the database.
-//         const application = await newApplication.findOne({ appRef: appRefe }, null, { session });
-//         // Return an error response if application not found.
-//         if (!application) {
-//             return res.status(400).json({
-//                 success: false,
-//                 status: 400,
-//                 error: {
-//                     code: "NOT_FOUND",
-//                     message: "Application not found for the provided reference."
-//                 },
-//                 metadata: {
-//                     server_time: Date.now(),
-//                     version: "v1.0.0"
-//                 }
-//             });
-//         };
-//         // Extract required fields from the applciation fetched from the database.
-//         const { name, appRef, email, role, appStatus } = application;
-//         // Stop the process if the application status is not draft.
-//         if (appStatus !== "DRAFT") {
-//             return res.status(400).json({
-//                 success: false,
-//                 status: 400,
-//                 error: {
-//                     code: "INVALID_ACTION",
-//                     message: "Cannot proceed the application is already processed or under process."
-//                 },
-//                 metadata: {
-//                     server_time: Date.now(),
-//                     version: "v1.0.0"
-//                 }
-//             });
-//         };
-//         // Set the application status to processing.
-//         await newApplication.findOneAndUpdate({ appRef: appRefe }, { appStatus: "PROCESSING" }, { session });
-//         // Define details for the history saver and the notifier.
-//         const nTitle = "Application Under Review.";
-//         const nMessage = `Your application with reference: ${appRef}, is under review. After performing required validation you will be notified with the application status.`;
-//         // Create a new notification history.
-//         const applicationHistory = new applicationHistory({
-//             title: nTitle,
-//             recipient: {
-//                 appRef: appRef,
-//                 name: name,
-//                 mail: email,
-//                 role: role
-//             },
-//             message: nMessage,
-//             referrer: {
-//                 userId: refferer.id,
-//                 role: refferer.role
-//             }
-//         });
-//         // Save it to database.
-//         await applicationHistory.save({ session });
-//         // extract referenceId from the new history db document.
-//         const nReference = applicationHistory.referenceId;
-//         // Define paylad for notifier.
-//         const notificationPayload = {
-//             options: {
-//                 referenceId: nReference,
-//                 title: nTitle,
-//                 message: nMessage
-//             },
-//             recipient: {
-//                 name: name,
-//                 mail: email,
-//                 role: role
-//             }
-//         };
-//         // Commit all the db queries performed above.
-//         await session.commitTransaction();
-//         // Send a notification to the user without awaiting for success.
-//         newNotificationBasic(notificationPayload);
-//         // Respond with success.
-//         res.json({
-//             success: true,
-//             status: 200,
-//             data: {
-//                 appRef: appRef,
-//                 message: "Status updated to processing"
-//             },
-//             metadata: {
-//                 server_time: Date.now(),
-//                 version: "v1.0.0"
-//             }
-//         });
-
-//     } catch (error) {
-//         // Abort the db transaction performed above if anything goes wrong.
-//         await session.abortTransaction();
-//         // Log the error to the database.
-//         logger({
-//             level: 'error',
-//             origin: 'mainService',
-//             originName: 'newApplicationsController',
-//             message: 'Unexpected error while forwarding application for review.',
-//             metadata: {
-//                 userId: refferer.id,
-//                 orderId: appRefe,
-//                 userType: refferer.role
-//             },
-//             stackTrace: error.message
-//         });
-//         // Respond with error.
-//         res.status(500).json({
-//             success: false,
-//             status: 500,
-//             error: {
-//                 code: "INTERNAL_ERROR",
-//                 message: "Unexpected error occured while forwarding application for review."
-//             },
-//             metadata: {
-//                 server_time: Date.now(),
-//                 version: "v1.0.0"
-//             }
-//         });
-//     } finally {
-//         // Finally close the mongoose session.
-//         await session.endSession();
-//     };
-// };
-
-// export const applicationReject = async (req, res) => {
-//     // Get the reson provided for rejection.
-//     const { reasonForRejection } = req.body || {};
-//     // Get the user id of which the application is entitled for rejection.
-//     const applicationReference = req.params?.appRef;
-//     // Get the referer from the req.user provided by jwt payload.
-//     const referer = req.user || {};
-//     // Check if the application reference is provided.
-//     if (!applicationReference) {
-//         return res.status(400).json({
-//             success: false,
-//             status: 400,
-//             error: {
-//                 code: "INVALID_DATA",
-//                 message: "Application reference number is required."
-//             },
-//             metadata: {
-//                 server_time: Date.now(),
-//                 version: "v1.0.0"
-//             }
-//         });
-//     };
-//     // Check if the user provided the reason for rejection.
-//     if (!reasonForRejection || reasonForRejection === "") {
-//         return res.status(400).json({
-//             success: false,
-//             status: 400,
-//             error: {
-//                 code: "INVALID_DATA",
-//                 message: "Reason is required for rejection."
-//             },
-//             metadata: {
-//                 server_time: Date.now(),
-//                 version: "v1.0.0"
-//             }
-//         });
-//     };
-//     // Create a mongoose session.
-//     const tSession = await mongoose.startSession();
-//     try {
-//         // Start the database transaction.
-//         tSession.startTransaction();
-//         const application = await newApplication.findOne({ appRef: applicationReference }, null, { session: tSession });
-//         // Check if the session exists.
-//         if (!application) {
-//             return res.status(404).json({
-//                 success: false,
-//                 status: 404,
-//                 error: {
-//                     code: "NOT_FOUND",
-//                     message: "Application does not exists."
-//                 },
-//                 metadata: {
-//                     server_time: Date.now(),
-//                     version: "v1.0.0"
-//                 }
-//             });
-//         };
-//         // Extra checks for the application.
-//         if (application.appStatus === "ACCEPTED") {
-//             return res.status(400).json({
-//                 success: false,
-//                 status: 400,
-//                 error: {
-//                     code: "INVALID_ACTION",
-//                     message: "Application cannot be rejected as it is already have been approved."
-//                 },
-//                 metadata: {
-//                     server_time: Date.now(),
-//                     version: "v1.0.0"
-//                 }
-//             });
-//         };
-//         if (application.appStatus === "REJECTED") {
-//             return res.status(400).json({
-//                 success: false,
-//                 status: 400,
-//                 error: {
-//                     code: "INVALID_ACTION",
-//                     message: "This application has been rejected already."
-//                 },
-//                 metadata: {
-//                     server_time: Date.now(),
-//                     version: "v1.0.0"
-//                 }
-//             });
-//         };
-//         if (application.appStatus === "DRAFT") {
-//             return res.status(400).json({
-//                 success: false,
-//                 status: 400,
-//                 error: {
-//                     code: "INVALID_ACTION",
-//                     message: "Cannot reject application without reviewing it."
-//                 },
-//                 metadata: {
-//                     server_time: Date.now(),
-//                     version: "v1.0.0"
-//                 }
-//             });
-//         };
-//         // update the status.
-//         await newApplication.findOneAndUpdate({ appRef: applicationReference }, { appStatus: "REJECTED" }, { session: tSession });
-//         // Define configurations for notification.
-//         const nTitle = "Application Rejected";
-//         const nMessage = `Your application with the reference id: ${application.appRef}, has been rejected due to the following reason(s). ${reasonForRejection}`;
-//         // Create a new notification history.
-//         const applicationHistory = new applicationHistory({
-//             title: nTitle,
-//             recipient: {
-//                 appRef: application.appRef,
-//                 name: application.name,
-//                 mail: application.email,
-//                 role: application.role
-//             },
-//             message: nMessage,
-//             referrer: {
-//                 userId: referer.id,
-//                 role: referer.role
-//             }
-//         });
-//         // Save it to database.
-//         await applicationHistory.save({ session: tSession });
-//         // extract referenceId from the new history db document.
-//         const nReference = applicationHistory.referenceId;
-//         // Define paylad for notifier.
-//         const notificationPayload = {
-//             options: {
-//                 referenceId: nReference,
-//                 title: nTitle,
-//                 message: nMessage
-//             },
-//             recipient: {
-//                 name: application.name,
-//                 mail: application.email,
-//                 role: application.role
-//             }
-//         };
-//         // Commit all the db queries performed above.
-//         await tSession.commitTransaction();
-//         // Send a notification to the user without awaiting for success.
-//         newNotificationBasic(notificationPayload);
-//         // Respond with success.
-//         res.json({
-//             success: true,
-//             status: 200,
-//             data: {
-//                 appRef: application.appRef,
-//                 message: "Status updated"
-//             },
-//             metadata: {
-//                 server_time: Date.now(),
-//                 version: "v1.0.0"
-//             }
-//         });
-//     } catch (error) {
-//         // Abort the db transaction performed above if anything goes wrong.
-//         await tSession.abortTransaction();
-//         // Log the error to the database.
-//         logger({
-//             level: 'error',
-//             origin: 'mainService',
-//             originName: 'newApplicationsController',
-//             message: 'Unexpected error while trying to reject application.',
-//             metadata: {
-//                 userId: referer.id,
-//                 orderId: applicationReference,
-//                 userType: referer.role
-//             },
-//             stackTrace: error.message
-//         });
-//         // Respond with error.
-//         res.status(500).json({
-//             success: false,
-//             status: 500,
-//             error: {
-//                 code: "INTERNAL_ERROR",
-//                 message: "Unexpected error occured while rejecting application."
-//             },
-//             metadata: {
-//                 server_time: Date.now(),
-//                 version: "v1.0.0"
-//             }
-//         });
-//     } finally {
-//         // Finally close the mongoose session.
-//         await tSession.endSession();
-//     };
-// };
-
-// export const applicationVerify = async (req, res) => {
-//     const referer = req?.user;  // Extract user object forwarded from the authenticator.
-//     const applicationReference = req.params?.appRef; // Extract application reference number from the url.
-//     // Cross check if appRef if provided.
-//     if (!applicationReference) {
-//         return res.status(400).json({
-//             success: false,
-//             status: 400,
-//             error: {
-//                 code: "INVALID_DATA",
-//                 message: "Application reference required."
-//             },
-//             metadata: {
-//                 server_time: Date.now(),
-//                 version: "v1.0.0"
-//             }
-//         });
-//     };
-//     const tSession = await mongoose.startSession();  // Create mongoose session for safe db queries.
-//     try {
-//         tSession.startTransaction(); // Start db transaction.
-//         const application = await newApplication.findOne({ appRef: applicationReference }, null, { session: tSession }); // Find the application from database.
-//         if (!application) {
-//             return res.status(404).json({
-//                 success: false,
-//                 status: 404,
-//                 error: {
-//                     code: "NOT_FOUND",
-//                     message: "Application not found."
-//                 },
-//                 metadata: {
-//                     server_time: Date.now(),
-//                     version: "v1.0.0"
-//                 }
-//             });
-//         };
-//         if (application.appStatus !== "PROCESSING") {
-//             return res.status(400).json({
-//                 success: false,
-//                 status: 400,
-//                 error: {
-//                     code: "INVALID_ACTION",
-//                     message: "Application yet to be processed, rejected or already accepted."
-//                 },
-//                 metadata: {
-//                     server_time: Date.now(),
-//                     version: "v1.0.0"
-//                 }
-//             });
-//         };
-//         const vData = {
-//             'identityDoc.isVerified': true,
-//             isAppVerified: true,
-//             verifiedBy: referer.id,
-//             appStatus: 'VERIFIED'
-//         }
-//         await newApplication.findOneAndUpdate({ appRef: applicationReference }, { $set: vData }, { session: tSession, new: true }); // Update the data as verified.
-//         // Define configuration for notification.
-//         const nTitle = "Application Verified";
-//         const nMessage = `Your application with the reference id: ${application.appRef}, has passed the final verification process.`;
-//         // Create a new notification history.
-//         const applicationHistory = new applicationHistory({
-//             title: nTitle,
-//             recipient: {
-//                 appRef: application.appRef,
-//                 name: application.name,
-//                 mail: application.email,
-//                 role: application.role
-//             },
-//             message: nMessage,
-//             referrer: {
-//                 userId: referer.id,
-//                 role: referer.role
-//             }
-//         });
-//         // Save it to database.
-//         await applicationHistory.save({ session: tSession });
-//         // extract referenceId from the new history db document.
-//         const nReference = applicationHistory.referenceId;
-//         // Define paylad for notifier.
-//         const notificationPayload = {
-//             options: {
-//                 referenceId: nReference,
-//                 title: nTitle,
-//                 message: nMessage
-//             },
-//             recipient: {
-//                 name: application.name,
-//                 mail: application.email,
-//                 role: application.role
-//             }
-//         };
-//         // Commit all the db queries performed above.
-//         await tSession.commitTransaction();
-//         // Send a notification to the user without awaiting for success.
-//         newNotificationBasic(notificationPayload);
-//         // Respond with success.
-//         res.json({
-//             success: true,
-//             status: 200,
-//             data: {
-//                 appRef: application.appRef,
-//                 message: "Application verified."
-//             },
-//             metadata: {
-//                 server_time: Date.now(),
-//                 version: "v1.0.0"
-//             }
-//         });
-//     } catch (error) {
-//         // Abort the db transaction performed above if anything goes wrong.
-//         await tSession.abortTransaction();
-//         // Log the error to the database.
-//         logger({
-//             level: 'error',
-//             origin: 'mainService',
-//             originName: 'newApplicationsController',
-//             message: 'Unexpected error while verifying application.',
-//             metadata: {
-//                 userId: referer.id,
-//                 orderId: applicationReference,
-//                 userType: referer.role
-//             },
-//             stackTrace: error.message
-//         });
-//         // Respond with error.
-//         res.status(500).json({
-//             success: false,
-//             status: 500,
-//             error: {
-//                 code: "INTERNAL_ERROR",
-//                 message: "Unexpected error occured while verifying application."
-//             },
-//             metadata: {
-//                 server_time: Date.now(),
-//                 version: "v1.0.0"
-//             }
-//         });
-//     } finally {
-//         // Finally close the mongoose session.
-//         await tSession.endSession();
-//     };
-// };

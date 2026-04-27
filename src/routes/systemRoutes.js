@@ -13,22 +13,16 @@ import { authorise } from "../middlewares/authoriser.js";
 
 const route = Router();
 
-route.post('/student_applications', studentApplicationHandler);
+route.get('/me');
 
-route.post('/student_applications/:appRef/uploadKyc', uploadKycDoc);
+route.post('/student_applications', studentApplicationHandler); // New Student applications.
 
-route.post('/student_applications/:appRef/kyc', finalKyc);
+route.post('/student_applications/:appRef/uploadKyc', uploadKycDoc); // Upload document for kyc.
 
-route.get('/student_applications', authenticate, authorise('admin', 'superuser'), getStudentApplications);
+route.post('/student_applications/:appRef/kyc', finalKyc); // Finalize kyc.
 
-route.get('/student_applications/:appRef', authenticate, authorise("admin", "superuser"), getStudentApplication);
+route.get('/student_applications', authenticate, authorise('admin', 'superuser'), getStudentApplications); // Get student applciations.
 
-// Paused work for below routes
-
-// route.post('/studentApplications/:appRef/review', authenticate, authorise('admin', 'superuser'), applicationReview);
-
-// route.post('/studentApplications/:appRef/reject', authenticate, authorise('admin', 'superuser'), applicationReject);
-
-// route.post('/studentApplications/:appRef/verify', authenticate, authorise('admin', 'superuser'), applicationVerify);
+route.get('/student_applications/:appRef', authenticate, authorise("admin", "superuser"), getStudentApplication); // Get a specific student application.
 
 export default route;

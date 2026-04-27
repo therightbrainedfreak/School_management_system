@@ -34,12 +34,16 @@ const studentApplicationSchema = new mongoose.Schema({
         paymentId: { type: String }
     },
     kyc: {
-        docType: { type: String, default: "AADHAR", enum: ["AADHAR"] },
-        docNumber: { type: String, required: true, unique: true },
         state: { type: String, default: "PENDING", enum: ["PENDING", "VERIFIED", "REJECTED"] },
         note: { type: String }
     },
-    paths: { type: Object }
+    kycIdentifier: {
+        iv: { type: String },
+        authTag: { type: String },
+        encryptedData: { type: String }
+    },
+    paths: { type: Object },
+    configurations: { type: Object }
 }, {
     timestamps: true
 });

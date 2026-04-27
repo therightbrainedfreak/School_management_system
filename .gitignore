@@ -3,6 +3,10 @@ logs
 *.log
 npm-debug.log*
 
+uploads/kyc
+
+uploads/pictures
+
 # Dependency directories
 node_modules/
 

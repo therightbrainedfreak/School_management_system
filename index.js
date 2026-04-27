@@ -1,3 +1,8 @@
+// This project is possible with the help of different resources that helped me to learn.
+// Special thanks to Shreyandcodingschool, codewithharry and apnacollege for providing free courses.
+// Thanks to Gemini, Claude and ChatGpt for helping me build this project.
+
+
 // *imports
 
 import 'dotenv/config';
