@@ -291,3 +291,85 @@ export const logoutAllController = async (req, res) => {
         })
     };
 };
+
+export const identifier = async (req, res) => {
+    // Get user data from the jwt token.
+    const user = req.user;
+
+    // Map role.
+    const MODEL = modelRoleMap[user.role];
+    if (!MODEL) {
+        return res.status(400).json({
+            success: false,
+            status: 400,
+            error: {
+                code: "INVALID_ROLE_MAP",
+                message: "Error while mapping role."
+            },
+            metadata: {
+                server_time: Date.now(),
+                version: "v1.0.0"
+            }
+        });
+    };
+
+    try {
+        const ac = await MODEL.findOne({ userId: user?.id });
+        if (!ac) {
+            return res.status(404).json({
+                success: false,
+                status: 404,
+                error: {
+                    code: "NOT_FOUND",
+                    message: "User doesn't exists."
+                },
+                metadata: {
+                    server_time: Date.now(),
+                    version: "v1.0.0"
+                }
+            });
+        }
+
+        res.json({
+            success: true,
+            status: 200,
+            data: {
+                user: {
+                    userId: ac.userId,
+                    userType: user.role,
+                    username: ac.name,
+                    fatherName: ac.fatherName,
+                    status: ac.status
+                }
+            },
+            metadata: {
+                server_time: Date.now(),
+                version: "v1.0.0"
+            }
+        });
+    } catch (error) {
+        logger({
+            level: 'error',
+            origin: 'authService',
+            originName: 'authController',
+            message: 'internal server error while identifying user.',
+            metadata: {
+                user_id: user.id,
+                userType: user.role
+            },
+            stackTrace: error.message
+        });
+        res.status(500).json({
+            success: false,
+            status: 500,
+            error: {
+                code: "INTERNAL_ERROR",
+                message: "An unknow error occured."
+            },
+            metadata: {
+                server_time: Date.now(),
+                version: "v1.0.0"
+            }
+        })
+    };
+};

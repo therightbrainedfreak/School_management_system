@@ -10,10 +10,11 @@ import {
 
 import { authenticate } from "../middlewares/authenticator.js";
 import { authorise } from "../middlewares/authoriser.js";
+import { identifier } from "../controllers/authController.js";
 
 const route = Router();
 
-route.get('/me');
+route.get('/me', authenticate, authorise('admin', 'superuser', 'backoffice', 'student', 'parent', 'teacher'), identifier);
 
 route.post('/student_applications', studentApplicationHandler); // New Student applications.
 
