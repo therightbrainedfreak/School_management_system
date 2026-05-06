@@ -1,0 +1,33 @@
+{
+  "name": "backend",
+  "version": "1.0.0",
+  "description": "nodejs powered school management erp system (backend)",
+  "license": "MIT",
+  "author": "riyaz (therightbrainedfreak)",
+  "type": "module",
+  "main": "index.js",
+  "scripts": {
+    "start": "node index.js",
+    "dev": "nodemon index.js"
+  },
+  "dependencies": {
+    "@xmldom/xmldom": "^0.9.9",
+    "adm-zip": "^0.5.17",
+    "bcrypt": "^6.0.0",
+    "cookie-parser": "^1.4.7",
+    "cors": "^2.8.6",
+    "date-fns": "^4.1.0",
+    "dotenv": "^17.3.1",
+    "express": "^5.2.1",
+    "express-rate-limit": "^8.3.2",
+    "fast-xml-parser": "^5.5.11",
+    "jsonwebtoken": "^9.0.3",
+    "mongoose": "^9.2.4",
+    "mongoose-unique-validator": "^6.1.0",
+    "multer": "^2.1.1",
+    "nanoid": "^5.1.6",
+    "node-cron": "^4.2.1",
+    "nodemailer": "^8.0.2",
+    "xml-crypto": "^6.1.2"
+  }
+}

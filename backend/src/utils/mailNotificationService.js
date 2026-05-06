@@ -1,0 +1,394 @@
+import 'dotenv/config';
+import nodemailer from 'nodemailer';
+import { passwordGenerator } from './utils.js';
+
+// Define nodemailer configuration.
+const transporter = nodemailer.createTransport({
+    service: "gmail",
+    auth: {
+        user: process.env.MAIL_USER,
+        pass: process.env.MAIL_PASS
+    }
+});
+
+/**
+ * Send a mail using nodemailer with three retries if one fails.
+ * @param {Object} mailOptions Mail options e.g., recipient, html template, sender & subject.
+ * @returns Status whether the mail is sent or not.
+ */
+
+const transporterWithRetries = async (mailOptions) => {
+    const MAX_RETRIES = 3;
+    for (let attempt = 1; attempt <= MAX_RETRIES; attempt++) {
+        try {
+            const info = await transporter.sendMail(mailOptions);
+            return { mailSent: true, message: "Mail sent successfully!", info: info };
+        } catch (error) {
+            console.log("retrying..");
+            if (attempt === MAX_RETRIES) {
+                return { mailSent: false, message: "Maximum attempts reached", error: error.message };
+            }
+        };
+    };
+};
+
+function newUserNotificationTemplate(username, userId, role, timestamp, password) {
+    const t = `<html>
+<head>
+    <style>
+        body {
+            background-color: #f4f4f7;
+            color: #333;
+            margin: 0;
+            padding: 0 30px 0 30px;
+        }
+
+        .container {
+            max - width: 600px;
+            margin: 20px auto;
+            background: #ffffff;
+            border-radius: 8px;
+            overflow: hidden;
+            border: 1px solid #e1e1e1;
+        }
+
+        .content {
+            padding: 30px;
+            line-height: 1.6;
+        }
+
+        .badge {
+            background - color: #e8f0fe;
+            color: #1a73e8;
+            padding: 4px 12px;
+            border-radius: 15px;
+            font-weight: bold;
+            font-size: 14px;
+        }
+
+        .details-box {
+            background - color: #f8f9fa;
+            border-left: 4px solid #1a1a1a;
+            padding: 15px;
+            margin: 20px 0;
+        }
+
+        .footer {
+            background - color: #f1f1f1;
+            color: #777;
+            text-align: center;
+            padding: 15px;
+            font-size: 12px;
+        }
+
+        .warning {
+            color: #d93025;
+            font-size: 13px;
+            margin-top: 10px;
+            font-style: italic;
+        }
+    </style>
+</head>
+
+<body style="font-family: 'Courier New', Courier, monospace;">
+    <div class="container">
+        <div align="center" style="padding: 20px 0 20px 0; background-color: #f8f9fa; color: #999999;">
+            <h4 style="color: #000000; margin: 0; font-size: 22px; letter-spacing: 2px;">THIS&THAT SCHOOL</h1>
+        </div>
+        <div class="content">
+            <p>Dear User,</p>
+            <p>This is an automated notification to inform that your <strong>account</strong> has been successfully
+                generated in the system.</p>
+
+            <div class="details-box">
+                <strong>New User Details:</strong><br>
+                Name: ${username}<br>
+                User Id: ${userId}<br>
+                Role: <span class="badge">${role}</span><br>
+                Generated At: ${timestamp}<br>
+                Password: ${password}
+            </div>
+
+            <p>If this action was expected, no further steps are required. However, if you do not recognize this
+                activity, please contact authorised person.
+            </p>
+            <p>
+                Please change your password at your first login.
+            </p>
+            <p class="warning">Note: New administrators have high-level access to the school database and user management features.</p>
+        </div>
+        <div class="footer"
+            style="padding: 30px; background-color: #f8f9fa; color: #999999; font-size: 12px; text-align: center; border-top: 1px solid #eeeeee;">
+            <p style="margin: 0;">&copy; 2026 This&that School. All rights reserved.</p>
+            <p style="margin: 5px 0 0 0;">123 Education Lane, Knowledge City, State, 56789</p>
+            <p style="margin: 10px 0 0 0;">
+                <a href="#" style="color: #1a73e8; text-decoration: none;">Privacy Policy</a> |
+                <a href="#" style="color: #1a73e8; text-decoration: none;">Unsubscribe</a>
+            </p>
+        </div>
+    </div>
+</body>
+</html>`
+    return t;
+}
+
+/**
+ * @param {string} username 
+ * @param {string} userId 
+ * @param {string} role 
+ * @param {string} timestamp 
+ * @param {string} recipient 
+ * @returns Notifies the provided user about his new account that was created on the system.
+ */
+
+export const generateNewUserNotification = async (username, userId, role, timestamp, recipient) => {
+    const password = passwordGenerator();
+    let template = newUserNotificationTemplate(username, userId, role, timestamp, password);
+    const mailOptions = {
+        from: "autogenerated",
+        to: recipient,
+        subject: "Security notification: Account generated!",
+        html: template
+    }
+    const success = await transporterWithRetries(mailOptions);
+    if (!success.mailSent) {
+        console.log("unable to send mail:", success.error);
+    } else {
+        console.log("Notified user:", success.info.messageId);
+    };
+};
+
+/**
+ * Creates a notification template for user.
+ * @param {string} title 
+ * @param {string} message 
+ * @param {string} username 
+ * @param {string} referenceId 
+ * @returns The complete Html template
+ */
+
+function newBasicNTemplate(title, message, username, referenceId, extras) {
+    const basicLetterHead = `<head>
+                                <meta charset="UTF-8">
+                                <meta name="viewport" content="width=device-width, initial-scale=1.0">
+                                <title>Notification</title>
+                            </head>
+                            
+                            <body
+                                style="margin: 0; padding: 0; font-family: Courier New, Courier, monospace, Tahoma, Geneva, Verdana, sans-serif; background-color: #f4f4f4;">
+                            
+                                <table align="center" border="0" cellpadding="0" cellspacing="0" width="600"
+                                    style="border-collapse: collapse; background-color: #ffffff; margin-top: 20px; margin-bottom: 20px; border: 1px solid #dddddd; box-shadow: 0 4px 8px rgba(0,0,0,0.05);">
+                            
+                                    <tr>
+                                        <td align="center" style="padding: 20px 0 20px 0; background-color: #f8f9fa; color: #999999;">
+                                            <h4 style="color: #000000; margin: 0; font-size: 22px; letter-spacing: 2px;">THIS&THAT SCHOOL</h1>
+                                        </td>
+                                    </tr>
+                            
+                                    <tr>
+                                        <td style="padding: 40px 30px 20px 30px;">
+                                            <h2
+                                                style="color: #333333; font-size: 22px; margin: 0; margin-bottom: 2px; display: inline-block; padding-bottom: 5px;">
+                                                ${title}
+                                            </h2>
+                                        </td>
+                                    </tr>
+                            
+                                    <tr>
+                                        <td style="padding: 0 30px 30px 30px; color: #555555; font-size: 16px; line-height: 1.6;">
+                                            <p>Dear ${username},</p>
+                            
+                                            <p style="margin-bottom: 20px;">
+                                                ${message}
+                                            </p>
+
+                                            <p style="margin-bottom: 20px;">
+                                                ${extras}
+                                            </p>
+
+                                            <table width="100%" style="background-color: #f9f9f9; border-radius: 8px; border: 1px solid #eeeeee;">
+                                                <tr>
+                                                    <td style="padding: 20px;">
+                                                        <strong style="color: #1a73e8;">Reference Details:</strong><br>
+                                                        <span style="font-size: 14px; color: #777777;">ID: ${referenceId} | Date: ${new
+                                        Date().toLocaleDateString()}</span>
+                                                    </td>
+                                                </tr>
+                                            </table>
+                                        </td>
+                                    </tr>
+                            
+                                    <tr>
+                                        <td
+                                            style="padding: 30px; background-color: #f8f9fa; color: #999999; font-size: 12px; text-align: center; border-top: 1px solid #eeeeee;">
+                                            <p style="margin: 0;">&copy; 2026 This&that School. All rights reserved.</p>
+                                            <p style="margin: 5px 0 0 0;">123 Education Lane, Knowledge City, State, 56789</p>
+                                            <p style="margin: 10px 0 0 0;">
+                                                <a href="#" style="color: #1a73e8; text-decoration: none;">Privacy Policy</a> |
+                                                <a href="#" style="color: #1a73e8; text-decoration: none;">Unsubscribe</a>
+                                            </p>
+                                        </td>
+                                    </tr>
+                            
+                                </table>
+                            
+                            </body>
+                            
+                            </html>`
+    return basicLetterHead;
+};
+
+/**
+ * Sends a notification to the user.
+ * @param {string} title title of the mail
+ * @param {string} referenceId reference id of the application log for future use
+ * @param {string} message message for the user
+ * @param {string} mail mail address of the recipient
+ * @param {string} name username of the new applicant
+ * @param {string} extras extra email fields text / html
+ */
+
+export const newNotificationBasic = async (title, referenceId, message, mail, name, extras) => {
+
+    if (!title || !referenceId || !message || !mail || !name) throw new Error("Missing required data for sending notification.");
+    if (!extras) {extras = ""};
+
+    const letterHead = newBasicNTemplate(title, message, name, referenceId, extras);
+
+    const mailOptions = {
+        from: "autogenerated",
+        to: mail,
+        subject: "This&that School notifications",
+        html: letterHead
+    };
+
+    const success = await transporterWithRetries(mailOptions);
+    if (!success.mailSent) {
+        throw new Error("unable to send mail:", success.error);
+    } else {
+        console.log("Notified user:", success.info.messageId);
+    };
+};
+
+function userTemplate(username, userId, role, timestamp, password) {
+    const t = `<html>
+<head>
+    <style>
+        body {
+            background-color: #f4f4f7;
+            color: #333;
+            margin: 0;
+            padding: 0 30px 0 30px;
+        }
+
+        .container {
+            max - width: 600px;
+            margin: 20px auto;
+            background: #ffffff;
+            border-radius: 8px;
+            overflow: hidden;
+            border: 1px solid #e1e1e1;
+        }
+
+        .content {
+            padding: 30px;
+            line-height: 1.6;
+        }
+
+        .badge {
+            background - color: #e8f0fe;
+            color: #1a73e8;
+            padding: 4px 12px;
+            border-radius: 15px;
+            font-weight: bold;
+            font-size: 14px;
+        }
+
+        .details-box {
+            background - color: #f8f9fa;
+            border-left: 4px solid #1a1a1a;
+            padding: 15px;
+            margin: 20px 0;
+        }
+
+        .footer {
+            background - color: #f1f1f1;
+            color: #777;
+            text-align: center;
+            padding: 15px;
+            font-size: 12px;
+        }
+
+        .warning {
+            color: #d93025;
+            font-size: 13px;
+            margin-top: 10px;
+            font-style: italic;
+        }
+    </style>
+</head>
+
+<body style="font-family: 'Courier New', Courier, monospace;">
+    <div class="container">
+        <div align="center" style="padding: 20px 0 20px 0; background-color: #f8f9fa; color: #999999;">
+            <h4 style="color: #000000; margin: 0; font-size: 22px; letter-spacing: 2px;">THIS&THAT SCHOOL</h1>
+        </div>
+        <div class="content">
+            <p>Dear User,</p>
+            <p>This is an automated notification to inform that your <strong>account</strong> has been successfully
+                generated in the system.</p>
+
+            <div class="details-box">
+                <strong>New User Details:</strong><br>
+                Name: ${username}<br>
+                User Id: ${userId}<br>
+                Role: <span class="badge">${role}</span><br>
+                Generated At: ${timestamp}<br>
+                Password: ${password}
+            </div>
+
+            <p>If this action was expected, no further steps are required. However, if you do not recognize this
+                activity, please contact authorised person.
+            </p>
+            <p>
+                Please change your password at your first login.
+            </p>
+        </div>
+        <div class="footer"
+            style="padding: 30px; background-color: #f8f9fa; color: #999999; font-size: 12px; text-align: center; border-top: 1px solid #eeeeee;">
+            <p style="margin: 0;">&copy; 2026 This&that School. All rights reserved.</p>
+            <p style="margin: 5px 0 0 0;">123 Education Lane, Knowledge City, State, 56789</p>
+            <p style="margin: 10px 0 0 0;">
+                <a href="#" style="color: #1a73e8; text-decoration: none;">Privacy Policy</a> |
+                <a href="#" style="color: #1a73e8; text-decoration: none;">Unsubscribe</a>
+            </p>
+        </div>
+    </div>
+</body>
+
+</html>`
+    return t;
+};
+
+export const newNotificationUser = async (username, userId, role, timestamp, recipient) => {
+
+    if (!username || !userId || !role || !timestamp || !recipient) throw new Error(`Unable to notify user: ${userId}, as some of the required fields are empty.`);
+
+    const password = passwordGenerator();
+
+    const template = userTemplate(username, userId, role, timestamp, password);
+
+        const mailOptions = {
+        from: "autogenerated",
+        to: recipient,
+        subject: "Security notification: Account generated!",
+        html: template
+    }
+    const success = await transporterWithRetries(mailOptions);
+    if (!success.mailSent) {
+        console.log("unable to send mail:", success.error);
+    } else {
+        console.log("Notified user:", success.info.messageId);
+    };
+};
