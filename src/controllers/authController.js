@@ -22,7 +22,7 @@ const modelRoleMap = {
 
 export const loginController = async (req, res) => {
     // Extract credentials from the request.
-    const { user_id, role, password } = req.body || {};
+    let { user_id, role, password } = req.body || {};
     // response with error if creadentials are incomplete.
     if ( !user_id || !role || !password ) {
         return res.status(400).json({
@@ -30,7 +30,7 @@ export const loginController = async (req, res) => {
             status: 400,
             error: {
                 code: "INCOMPLETE_CREDS",
-                message: "Incomplete credentials provided."
+                message: "Incomplete credentials"
             },
             metadata: {
                 server_time: Date.now(),
@@ -38,6 +38,9 @@ export const loginController = async (req, res) => {
             }
         });
     };
+
+    // always set user id to uppercase
+    user_id = user_id.toUpperCase();
     // Map the database model to the role provided
     const MODEL = modelRoleMap[role];
     // Respond with error if map doesn't have the provided role.
@@ -47,7 +50,7 @@ export const loginController = async (req, res) => {
             status: 400,
             error: {
                 code: "INVALID_ROLE_MAP",
-                message: "Error while mapping role."
+                message: "Invalid Credentials"
             },
             metadata: {
                 server_time: Date.now(),
@@ -65,7 +68,7 @@ export const loginController = async (req, res) => {
                 status: 400,
                 error: {
                     code: "INVALID_CREDS",
-                    message: "Invalid userid or password provided."
+                    message: "Invalid User ID or Password"
                 },
                 metadata: {
                     server_time: Date.now(),
@@ -80,7 +83,7 @@ export const loginController = async (req, res) => {
                 status: 400,
                 error: {
                     code: "INVALID_CREDS",
-                    message: "Invalid role provided."
+                    message: "Invalid credentials"
                 },
                 metadata: {
                     server_time: Date.now(),
@@ -97,7 +100,7 @@ export const loginController = async (req, res) => {
                 status: 400,
                 error: {
                     code: "INVALID_CREDS",
-                    message: "Invalid userid or password provided."
+                    message: "Invalid User ID or Password"
                 },
                 metadata: {
                     server_time: Date.now(),
@@ -112,7 +115,7 @@ export const loginController = async (req, res) => {
                 status: 403,
                 error: {
                     code: "UNAUTHORISED",
-                    message: "Cannot login. User not active."
+                    message: "User is inactive"
                 },
                 metadata: {
                     server_time: Date.now(),
@@ -137,9 +140,9 @@ export const loginController = async (req, res) => {
         // Set cookie to the client.
         res.cookie('token', token, {
             httpOnly: true,
-            secure: process.env.NODE_ENV === 'production',
+            secure: false,
             maxAge: 6 * 60 * 60 * 1000,
-            sameSite: 'strict'
+            sameSite: 'lax'
         });
         // Log successful signing log.
         logger({
@@ -186,7 +189,7 @@ export const loginController = async (req, res) => {
             status: 500,
             error: {
                 code: "INTERNAL_ERROR",
-                message: "Unexpected error happened while loggin in user."
+                message: "Unexpected error happened"
             },
             metadata: {
                 server_time: Date.now(),
@@ -241,6 +244,9 @@ export const logoutAllController = async (req, res) => {
             }
         });
     };
+
+    user_Id = user_id.toUpperCase();
+
     try {
         await MODEL.findOneAndUpdate(
             { userId: user_id },
@@ -294,7 +300,7 @@ export const logoutAllController = async (req, res) => {
 
 export const identifier = async (req, res) => {
     // Get user data from the jwt token.
-    const user = req.user;
+    const user = req?.user;
 
     // Map role.
     const MODEL = modelRoleMap[user.role];
