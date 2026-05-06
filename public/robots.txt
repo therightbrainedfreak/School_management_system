@@ -1,0 +1,12 @@
+# Allow all search engines to crawl the site
+User-agent: *
+Allow: /
+
+# Disallow private or administrative routes
+Disallow: /admin/
+Disallow: /dashboard/
+Disallow: /login/
+Disallow: /private/
+
+# Host-specific sitemap (Replace with your actual domain)
+Sitemap: http://localhost:5173/sitemap.xml
