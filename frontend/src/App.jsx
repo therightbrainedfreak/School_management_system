@@ -1,5 +1,5 @@
 import './App.css'
-import { Routes, Route } from 'react-router-dom'
+import { Routes, Route, useLocation } from 'react-router-dom'
 import Landing from './pages/Landing'
 import LoginPage from './pages/Login'
 import Navbar from './components/Navbar'
@@ -10,69 +10,75 @@ import LearnMore from './pages/LearnMore'
 import Blogs from './pages/Blogs'
 import BlogsNavbar from './components/BlogsNavbar'
 import ProtectedRoute from './components/ProtectedRoute'
+import Dashboard from './pages/Dashboard'
+import { AnimatePresence } from 'framer-motion'
+import PageTransition from './components/PageTransition'
 
 function App() {
+  const location = useLocation();
+  
   return (
+    <AnimatePresence mode='wait'>
+      <Routes location={location} key={location.pathname}>
 
-    <Routes>
+        <Route path='/' element={
+          <PageTransition>
+            <Navbar />
+            <Landing />
+            <Footer />
+          </PageTransition>
+        } />
 
-      <Route path='/' element={
-        <>
-          <Navbar />
-          <Landing />
-          <Footer/>
-        </>
-      } />
+        <Route path="/login" element={
+          <PageTransition>
+            <Navbar />
+            <LoginPage />
+            <Footer />
+          </PageTransition>
+        } />
 
-      <Route path="/login" element={
-        <>
-        <Navbar/>
-        <LoginPage/>
-        <Footer/>
-        </>
-      }/>
+        <Route path="/code-of-conduct" element={
+          <PageTransition>
+            <Navbar />
+            <CodeOfConduct />
+            <Footer />
+          </PageTransition>
+        } />
 
-      <Route path="/code-of-conduct" element={
-        <>
-        <Navbar/>
-        <CodeOfConduct/>
-        <Footer/>
-        </>
-      }/>
+        <Route path="/help-center" element={
+          <PageTransition>
+            <Navbar />
+            <HelpCenter />
+            <Footer />
+          </PageTransition>
+        } />
 
-      <Route path="/help-center" element={
-        <>
-        <Navbar/>
-        <HelpCenter/>
-        <Footer/>
-        </>
-      }/>
+        <Route path="/learn-more" element={
+          <PageTransition>
+            <Navbar />
+            <LearnMore />
+            <Footer />
+          </PageTransition>
+        } />
 
-      <Route path="/learn-more" element={
-        <>
-        <Navbar/>
-        <LearnMore/>
-        <Footer/>
-        </>
-      }/>
-      
-      <Route path="/blogs" element={
-        <>
-        <Navbar/>
-        <BlogsNavbar/>
-        <Blogs/>
-        <Footer/>
-        </>
-      }/>
+        <Route path="/blogs" element={
+          <PageTransition>
+            <Navbar />
+            <BlogsNavbar />
+            <Blogs />
+            <Footer />
+          </PageTransition>
+        } />
 
-      <Route path="/dashboard" element={
-        <>
-        <ProtectedRoute>
-          <dashboard/>
-        </ProtectedRoute>
-        </>
-      }/>
-    </Routes>
+        <Route path="/dashboard" element={
+          <PageTransition>
+            <ProtectedRoute>
+              <Dashboard />
+            </ProtectedRoute>
+          </PageTransition>
+        } />
+      </Routes>
+    </AnimatePresence>
   )
 }
 

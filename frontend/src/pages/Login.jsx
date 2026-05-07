@@ -1,15 +1,12 @@
 import React, { useEffect, useState } from "react";
-import { useNavigate } from "react-router-dom";
+import { useNavigate, Navigate } from "react-router-dom";
 import { AnimatePresence, motion } from "framer-motion";
 import { ToastContainer, toast, Slide } from 'react-toastify';
 import { ThreeDots } from "react-loader-spinner";
 import { FaArrowRight } from "react-icons/fa";
+import { useAuth } from "../context/AuthContext";
 
 function LoginPage() {
-
-    const proto = 'http'
-    const host = '10.200.233.139'
-    const port = '3300'
 
     const ROLES = {
         STU: 'STUDENT',
@@ -25,7 +22,7 @@ function LoginPage() {
     const [role, setRole] = useState('ROLE');
     const navigate = useNavigate();
     const [inputError, setInputError] = useState('');
-
+    const { user, login, logout } = useAuth();
     const [isLoading, setisLoading] = useState(false);
 
     useEffect(() => {
@@ -65,8 +62,11 @@ function LoginPage() {
                 })
             })
             const results = await response.json();
-            if (response.ok) {
-                toast.success("Login Success");
+            if (results.success) {
+                login(results.data.user);
+                toast.success("Login Success", {autoClose: 2000});
+                await new Promise(resolve => setTimeout(resolve, 2000))
+                navigate("/dashboard");
             } else {
                 toast.error(results.error.message);
             }
