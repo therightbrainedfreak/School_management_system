@@ -7,19 +7,18 @@ export function AuthProvider({ children }) {
     const [ loading, setLoading ] = useState(false);
 
     useEffect(() => {
-        verifySession();
+        const controller = new AbortController();
+        verifySession(controller.signal);
+        return () => controller.abort();
     }, [])
 
-    const verifySession = async () => {
+    const verifySession = async (signal) => {
         const url = `/api/v1/me`;
-
-        const controller = new AbortController();
-        const signal = controller.signal;
 
         setLoading(true);
 
         try {
-            const request = await fetch(url, { signal, credential: 'inlcude' });
+            const request = await fetch(url, { signal, credentials: 'include' });
             const response = await request.json();
 
             if (response.success) {
@@ -36,20 +35,15 @@ export function AuthProvider({ children }) {
             }
 
         } catch (error) {
-
             if (error.name === 'AbortError') {
                 console.error('Fetch cancelled on component unmount')
             } else {
                 console.error('Fetch error', error)
             }
 
-        } finally {() => {
+        } finally {
             setLoading(false)
-        }};
-
-        return () => {
-            controller.abort();
-        }
+        };
     }
 
     const login = ( userData ) => {
