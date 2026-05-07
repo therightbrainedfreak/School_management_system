@@ -1,5 +1,5 @@
 import { useState, useEffect } from 'react'
-import DashboardButton from '../shards/DashBoardButton'
+import DashboardButton from './DashBoardButton'
 import { IoIosCloseCircleOutline } from "react-icons/io";
 import { useNavigate } from 'react-router-dom'
 import { BiMenu, BiX, BiSolidDashboard } from "react-icons/bi"

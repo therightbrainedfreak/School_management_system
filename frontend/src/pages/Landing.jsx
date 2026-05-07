@@ -35,7 +35,7 @@ function Landing() {
             Learn more
             <FaArrowRight size={"12px"}/>
           </button>
-          <button className='font-bold border-2 p-2 w-34 flex items-center justify-center gap-2 rounded-sm'>
+          <button className='font-bold border-2 p-2 w-34 flex items-center justify-center gap-2 rounded-sm' onClick={()=>{navigate('/blogs')}}>
             Blogs
             <FaArrowRight size={"12px"}/>
           </button>

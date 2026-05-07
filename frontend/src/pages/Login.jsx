@@ -8,7 +8,7 @@ import { FaArrowRight } from "react-icons/fa";
 function LoginPage() {
 
     const proto = 'http'
-    const host = '192.168.29.125'
+    const host = '10.200.233.139'
     const port = '3300'
 
     const ROLES = {
@@ -52,7 +52,7 @@ function LoginPage() {
         e.preventDefault();
         setisLoading(true)
         try {
-            const response = await fetch(`${proto}://${host}:${port}/api/v1/auth/login`, {
+            const response = await fetch(`/api/v1/auth/login`, {
                 method: "POST",
                 headers: {
                     'content-type': 'application/json'
@@ -164,7 +164,6 @@ function LoginPage() {
                     <button
                         type="submit"
                         className={`w-full border-2 border-gray-900 font-bold mt-6 p-2 rounded-md bg-blue-300 flex items-center justify-center`}
-                        type="submit"
                         disabled={inputError ? true : isLoading ? true : false}
                     >
                         {isLoading ? <LoginLoader/> : <div className="flex items-center gap-2">Login <FaArrowRight size={"12px"}/></div>}

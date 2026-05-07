@@ -143,7 +143,7 @@ export const loginController = async (req, res) => {
             secure: false,
             maxAge: 6 * 60 * 60 * 1000,
             sameSite: 'lax'
-        });
+        })
         // Log successful signing log.
         logger({
             level: 'info',
@@ -205,8 +205,8 @@ export const logoutController = async (req, res) => {
     const role = req.user?.role;
     res.clearCookie('token', {
         httpOnly: true,
-        secure: process.env.NODE_ENV === 'production',
-        sameSite: 'strict'
+        secure: false,
+        sameSite: 'lax'
     });
     res.json({
         success: true,
@@ -254,8 +254,8 @@ export const logoutAllController = async (req, res) => {
         );
         res.clearCookie('token', {
             httpOnly: true,
-            secure: process.env.NODE_ENV === 'production',
-            sameSite: 'strict'
+            secure: false,
+            sameSite: 'lax'
         });
         res.json({
             success: true,
@@ -304,6 +304,7 @@ export const identifier = async (req, res) => {
 
     // Map role.
     const MODEL = modelRoleMap[user.role];
+
     if (!MODEL) {
         return res.status(400).json({
             success: false,

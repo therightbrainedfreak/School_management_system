@@ -7,10 +7,15 @@ import Footer from './components/Footer'
 import CodeOfConduct from './pages/CodeOfConduct'
 import HelpCenter from './pages/HelpCenter'
 import LearnMore from './pages/LearnMore'
+import Blogs from './pages/Blogs'
+import BlogsNavbar from './components/BlogsNavbar'
+import ProtectedRoute from './components/ProtectedRoute'
 
 function App() {
   return (
+
     <Routes>
+
       <Route path='/' element={
         <>
           <Navbar />
@@ -18,6 +23,7 @@ function App() {
           <Footer/>
         </>
       } />
+
       <Route path="/login" element={
         <>
         <Navbar/>
@@ -25,6 +31,7 @@ function App() {
         <Footer/>
         </>
       }/>
+
       <Route path="/code-of-conduct" element={
         <>
         <Navbar/>
@@ -32,6 +39,7 @@ function App() {
         <Footer/>
         </>
       }/>
+
       <Route path="/help-center" element={
         <>
         <Navbar/>
@@ -39,11 +47,29 @@ function App() {
         <Footer/>
         </>
       }/>
+
       <Route path="/learn-more" element={
         <>
         <Navbar/>
         <LearnMore/>
         <Footer/>
+        </>
+      }/>
+      
+      <Route path="/blogs" element={
+        <>
+        <Navbar/>
+        <BlogsNavbar/>
+        <Blogs/>
+        <Footer/>
+        </>
+      }/>
+
+      <Route path="/dashboard" element={
+        <>
+        <ProtectedRoute>
+          <dashboard/>
+        </ProtectedRoute>
         </>
       }/>
     </Routes>
