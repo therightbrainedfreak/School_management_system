@@ -1,6 +1,9 @@
 import mongoose from 'mongoose';
+import { nanoid } from 'nanoid';
+import { JSDOM } from 'jsdom';
+import DOMPurify from 'dompurify';
 
-const blog = new mongoose.Schema({
+const blogSchema = new mongoose.Schema({
     blogId: { type: String, index: true, required: true, unique: true },
     author: {
         id: { type: String, required: true },
@@ -14,8 +17,26 @@ const blog = new mongoose.Schema({
     },
     metadata: {
         category: {type: String, required: true},
-        tags: {type: Array, required: true},
-        likes: {type: Number},
-        comments: {}
+        tags: {type: [String], required: true},
+        likes: [{
+            id: { type: String },
+            role: { type: String },
+            name: { type: String }
+        }]
     },
-}, {timestamps: true})
+    title: { type: String, required: true },
+    content: { type: String, required: true },
+    isAvailable: { type: Boolean, default: true }
+}, {
+    timestamps: true
+})
+
+blogSchema.pre('validate', function() {
+    if (this.isNew && !this.blogId) {
+        this.blogId = nanoid(12);
+    }
+});
+
+const blog = mongoose.model('blog', blogSchema);
+
+export default blog;

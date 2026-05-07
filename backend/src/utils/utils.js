@@ -1,4 +1,9 @@
 import { customAlphabet } from 'nanoid';
+import { JSDOM } from 'jsdom';
+import DOMPurify from 'dompurify';
+
+const window = new JSDOM('').window;
+const purify = DOMPurify(window);
 
 export const generateUniqueId = (role) => {
     const rolemap = {
@@ -55,3 +60,19 @@ export const generateKycId = () => {
     const generateId = rInt();
     return generateId;
 }
+
+export const sanitizeHTML = (dirty) => {
+  return purify.sanitize(dirty, {
+    ALLOWED_TAGS: [
+      'p', 'br', 'strong', 'em', 'u', 's',
+      'h1', 'h2', 'h3', 'h4',
+      'ul', 'ol', 'li',
+      'blockquote', 'pre', 'code',
+      'a',
+    ],
+    ALLOWED_ATTR: [
+      'href', 'title',
+      'class', 'target'
+    ],
+  });
+};

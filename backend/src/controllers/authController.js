@@ -60,7 +60,7 @@ export const loginController = async (req, res) => {
     };
     try {
         // find the user from the database.
-        const user = await MODEL.findOne({ userId: user_id}).select('username status userId password role jwtTokenVersion');
+        const user = await MODEL.findOne({ userId: user_id}).select('name status userId password role jwtTokenVersion');
         // Respond with error if user is not found.
         if ( !user ) {
             return res.status(400).json({
@@ -127,6 +127,7 @@ export const loginController = async (req, res) => {
         const payload = {
             id: user.userId,
             role: user.role,
+            name: user.name,
             token_version: user.jwtTokenVersion,
             token_type: "individual"
         };

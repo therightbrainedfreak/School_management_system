@@ -11,6 +11,7 @@ import {
 import { authenticate } from "../middlewares/authenticator.js";
 import { authorise } from "../middlewares/authoriser.js";
 import { identifier } from "../controllers/authController.js";
+import { composeBlog } from "../controllers/blogController.js";
 
 const route = Router();
 
@@ -25,5 +26,9 @@ route.post('/student_applications/:appRef/kyc', finalKyc); // Finalize kyc.
 route.get('/student_applications', authenticate, authorise('admin', 'superuser'), getStudentApplications); // Get student applciations.
 
 route.get('/student_applications/:appRef', authenticate, authorise("admin", "superuser"), getStudentApplication); // Get a specific student application.
+
+// ****************** BLOG ROUTES ****************** //
+
+route.post('/blog', authenticate, authorise('admin', 'superuser'), composeBlog);
 
 export default route;
