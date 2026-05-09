@@ -2,8 +2,10 @@ import React, { useEffect, useState } from "react";
 import { useNavigate, Navigate } from "react-router-dom";
 import { AnimatePresence, motion } from "framer-motion";
 import { ToastContainer, toast, Slide } from 'react-toastify';
+
 import { ThreeDots } from "react-loader-spinner";
 import { FaArrowRight } from "react-icons/fa";
+
 import { useAuth } from "../context/AuthContext";
 
 function LoginPage() {
@@ -24,6 +26,8 @@ function LoginPage() {
     const [inputError, setInputError] = useState('');
     const { user, login, logout } = useAuth();
     const [isLoading, setisLoading] = useState(false);
+
+    const [ isAlertVisible, setAlertVisibility ] = useState(false);
 
     useEffect(() => {
         if (user_id.length >= 3) {

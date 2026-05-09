@@ -1,8 +1,8 @@
 function Blogs() {
     return (
-        <>
-        Blogs Page
-        </>
+        <div className="mx-4 my-4">
+            actual data
+        </div>
     )
 }
 
