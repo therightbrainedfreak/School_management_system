@@ -3,8 +3,8 @@ import { createContext, useContext, useState, useEffect } from "react";
 const AuthContext = createContext(null);
 
 export function AuthProvider({ children }) {
-    const [ user, setUser ] = useState(null);
-    const [ loading, setLoading ] = useState(false);
+    const [user, setUser] = useState(null);
+    const [loading, setLoading] = useState(true);
 
     useEffect(() => {
         const controller = new AbortController();
@@ -19,6 +19,7 @@ export function AuthProvider({ children }) {
 
         try {
             const request = await fetch(url, { signal, credentials: 'include' });
+            if (signal.aborted) return;
             const response = await request.json();
 
             if (response.success) {
@@ -35,18 +36,18 @@ export function AuthProvider({ children }) {
             }
 
         } catch (error) {
-            if (error.name === 'AbortError') {
-                console.error('Fetch cancelled on component unmount')
-            } else {
-                console.error('Fetch error', error)
-            }
+            if (error.name === 'AbortError') return;
+            console.error('Fetch error', error);
+            setUser(null);
 
         } finally {
-            setLoading(false)
+            if (!signal.aborted) {   // ← only set loading false if NOT aborted
+                setLoading(false);
+            }
         };
     }
 
-    const login = ( userData ) => {
+    const login = (userData) => {
         setUser(userData);
     }
 
@@ -55,7 +56,7 @@ export function AuthProvider({ children }) {
     }
 
     return (
-        <AuthContext.Provider value={{user, loading, login, logout}}>
+        <AuthContext.Provider value={{ user, loading, login, logout }}>
             {children}
         </AuthContext.Provider>
     )

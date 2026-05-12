@@ -3,7 +3,7 @@ import DashboardButton from './DashBoardButton'
 import { IoIosCloseCircleOutline } from "react-icons/io";
 import { useNavigate } from 'react-router-dom'
 import { BiMenu, BiX, BiSolidDashboard } from "react-icons/bi"
-import { motion, } from 'framer-motion'
+import { motion, AnimatePresence } from 'framer-motion'
 
 
 function Navbar() {
@@ -32,48 +32,51 @@ function Navbar() {
                 </div>
             </nav>
 
-            <div className={`menu z-10 scroll-none max-sm:absolute backdrop-blur-[2px] bg-gray-200/80 top-0 right-0 h-full w-full ${isOpen ? "flex items-center justify-end" : "hidden"}`} onClick={()=>{alterMenuState(!isOpen)}}>
-                <motion.ul
-                    className='bg-gray-950 text-white w-80 h-full px-14 py-12 flex flex-col gap-2 rounded-tl-3xl rounded-bl-3xl  relative'
-                    initial={{ x: "-100vw" }}
-                    animate={{ x: isOpen ? 0 : 200 }}
-                    transition={{ type: "spring", bounceDamping: 10, duration: 0.1, ease: "easeIn" }}
-                    onClick={(e) => {
-                        e.stopPropagation();
-                    }}
-                >
-                    <li className='menu-link' onClick={() => {
-                        navigate('/login')
-                        alterMenuState(!isOpen)
-                    }}
+            <div className={`menu z-10 scroll-none max-sm:absolute backdrop-blur-[2px] bg-gray-600/80 top-0 right-0 h-full w-full ${isOpen ? "flex items-center justify-end" : "hidden"}`} onClick={()=>{alterMenuState(!isOpen)}}>
+                <AnimatePresence>
+                    <motion.ul
+                        className='bg-gray-950 text-white w-80 h-full px-14 py-12 flex flex-col gap-2 rounded-tl-3xl rounded-bl-3xl  relative'
+                        initial={{ x: "-100vw" }}
+                        animate={{ x: isOpen ? 0 : "100vw" }}
+                        exit={{ x: "-100vw" }}
+                        transition={{ duration: 0.2, ease: "easeInOut" }}
+                        onClick={(e) => {
+                            e.stopPropagation();
+                        }}
                     >
-                        Login
-                    </li>
-
-                    <li className='menu-link'>Utilities</li>
-
-                    <li className='menu-link'>Notice Board</li>
-
-                    <li className='menu-link'>Complaint Box</li>
-
-                    <li className='menu-link'>About Us</li>
-
-                    <li className='menu-link' onClick={() => {
-                        navigate('/code-of-conduct')
-                        alterMenuState(!isOpen)
-                    }}>Code of Conduct</li>
-
-                    <li className='menu-link' onClick={() => {
-                        navigate('/help-center')
-                        alterMenuState(!isOpen)
-                    }}>Help Center</li>
-
-                    <span className='absolute right-4 top-4'>
-                        <IoIosCloseCircleOutline size={"26px"} onClick={() => {
+                        <li className='menu-link' onClick={() => {
+                            navigate('/login')
                             alterMenuState(!isOpen)
-                        }} />
-                    </span>
-                </motion.ul>
+                        }}
+                        >
+                            Login
+                        </li>
+
+                        <li className='menu-link'>Utilities</li>
+
+                        <li className='menu-link'>Notice Board</li>
+
+                        <li className='menu-link'>Complaint Box</li>
+
+                        <li className='menu-link'>About Us</li>
+
+                        <li className='menu-link' onClick={() => {
+                            navigate('/code-of-conduct')
+                            alterMenuState(!isOpen)
+                        }}>Code of Conduct</li>
+
+                        <li className='menu-link' onClick={() => {
+                            navigate('/help-center')
+                            alterMenuState(!isOpen)
+                        }}>Help Center</li>
+
+                        <span className='absolute right-4 top-4'>
+                            <IoIosCloseCircleOutline size={"26px"} onClick={() => {
+                                alterMenuState(!isOpen)
+                            }} />
+                        </span>
+                    </motion.ul>
+                </AnimatePresence>
             </div>
         </>
     )

@@ -11,7 +11,7 @@ import {
 import { authenticate } from "../middlewares/authenticator.js";
 import { authorise } from "../middlewares/authoriser.js";
 import { identifier } from "../controllers/authController.js";
-import { composeBlog } from "../controllers/blogController.js";
+import { categories, composeBlog, suggestions, tags } from "../controllers/blogController.js";
 
 const route = Router();
 
@@ -31,24 +31,8 @@ route.get('/student_applications/:appRef', authenticate, authorise("admin", "sup
 
 route.post('/blog', authenticate, authorise('admin', 'superuser'), composeBlog);
 
-// test search route
-
-const f = async () => {
-    const d = await fetch('https://jsonplaceholder.typicode.com/comments')
-    const response = await d.json();
-    return response
-}
-
-let data = []
-
-f().then(res => data = res).catch(err => console.log(err))
-
-route.get('/blogs/search', async (req, res) => {
-    const {q} = req.query;
-    if (!q) return res.status(400).json({message: "empty queries"});
-    if (!data) return res.status(400).json({message: "data not loaded yet"});
-    const r = data.filter(f => f.name.toLowerCase().includes(q.toLowerCase())).slice(0, 10)
-    res.json(r);
-})
+route.get('/blogs/bss', suggestions)
+route.get('/blogs/categories', categories);
+route.get('/blogs/tags', tags);
 
 export default route;

@@ -1,5 +1,5 @@
 import React, { useEffect, useState } from "react";
-import { useNavigate, Navigate } from "react-router-dom";
+import { useNavigate, Navigate, useSearchParams } from "react-router-dom";
 import { AnimatePresence, motion } from "framer-motion";
 import { ToastContainer, toast, Slide } from 'react-toastify';
 
@@ -9,6 +9,9 @@ import { FaArrowRight } from "react-icons/fa";
 import { useAuth } from "../context/AuthContext";
 
 function LoginPage() {
+    const [searchParams] = useSearchParams();
+    const cPath = searchParams.get('cpath');
+    const dPath = '/'
 
     const ROLES = {
         STU: 'STUDENT',
@@ -70,7 +73,7 @@ function LoginPage() {
                 login(results.data.user);
                 toast.success("Login Success", {autoClose: 2000});
                 await new Promise(resolve => setTimeout(resolve, 2000))
-                navigate("/dashboard");
+                navigate(cPath || dPath);
             } else {
                 toast.error(results.error.message);
             }

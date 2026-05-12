@@ -25,3 +25,15 @@ body {
 .t-bg {
     transition: background 300ms ease-in-out;
 }
+
+.quill-wrapper .ql-toolbar {
+  border-radius: 8px 8px 0 0;
+  border-color: #e5e7eb; /* tailwind gray-200 */
+}
+
+.quill-wrapper .ql-container {
+  border-radius: 0 0 8px 8px;
+  border-color: #e5e7eb;
+  min-height: 300px;
+  font-size: 16px;
+}

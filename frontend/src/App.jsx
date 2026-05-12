@@ -13,6 +13,7 @@ import ProtectedRoute from './components/ProtectedRoute'
 import Dashboard from './pages/Dashboard'
 import { AnimatePresence } from 'framer-motion'
 import PageTransition from './components/PageTransition'
+import ComposeBlog from './pages/ComposeBlog'
 
 function App() {
   const location = useLocation();
@@ -77,6 +78,17 @@ function App() {
             </ProtectedRoute>
           </PageTransition>
         } />
+
+        <Route path="/blogs/compose" element={
+          <PageTransition>
+            <ProtectedRoute>
+              <Navbar />
+              <ComposeBlog />
+              <Footer />
+            </ProtectedRoute>
+          </PageTransition>
+        } />
+
       </Routes>
     </AnimatePresence>
   )
