@@ -1,7 +1,9 @@
 import 'dotenv/config';
 import mongoose from "mongoose";
+import pino_logger from '../utils/pino.js';
 
 const connectDB = async () => {
+  pino_logger.info('Connection to MongoDB')
   try {
     const conn = await mongoose.connect(process.env.MONGO_URI);
   } catch (error) {
@@ -9,9 +11,8 @@ const connectDB = async () => {
   }
 };
 
-mongoose.connection.on('connected', () => console.log('MongoDB: Connected'));
-mongoose.connection.on('error', (err) => console.log(`MongoDB: Error ${err}`));
-mongoose.connection.on('disconnected', () => console.log('MongoDB: Disconnected'));
-mongoose.connection.on('reconnected', () => console.log('MongoDB: Reconnected'));
+mongoose.connection.on('connected', () => pino_logger.info('MongoDB connected'));
+mongoose.connection.on('error', (err) => pino_logger.fatal({error: err}, 'Failed to connect to MongoDB'));
+mongoose.connection.on('disconnected', () => pino_logger.error('MongoDB disconnected'));
 
 export default connectDB;

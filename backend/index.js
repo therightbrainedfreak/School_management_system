@@ -14,81 +14,116 @@ import cron from 'node-cron';
 import { generateTimePeriod } from './src/config/timeScheduleGenerator.js';
 import { globalLimiter } from './src/middlewares/rateLimiter.js';
 import cors from 'cors';
+import pino_logger from './src/utils/pino.js'
+import { initCalenderGenerator } from './src/config/masterCalenderGenerator.js';
+
+// *route imports
+
+import authRoutes from './src/routes/authRoutes.js';
+import superUserRoutes from './src/routes/superUserRoutes.js';
+import systemRoutes from './src/routes/systemRoutes.js';
+
+// *catch unhandled rejections
+
+process.on('unhandledRejection', (reason) => {
+  pino_logger.fatal({ reason }, 'Unhandled promise rejection');
+  process.exit(1);
+});
+
+// *startup message
+
+pino_logger.info('Starting up')
 
 // *declarations / configs
 
 const port = process.env.PORT || 3000;
-
 const app = express();
 
-connectDB();
-
-// Only run while needed or running first time, running this will wipe out all the info linked to the master calender such as holidays, schedules events.
-
-import { initCalenderGenerator } from './src/config/masterCalenderGenerator.js';
-
-initCalenderGenerator(false); // run it with true to reset and generate a fresh master calender.
-
-// *daily cron job for creating timeschedule for every user.
-
-cron.schedule('0 6 * * *', () => {
-    generateTimePeriod();
-}, {
-    scheduled: true
-});
+const allowedOrigins = [
+  'http://localhost:5500',
+  'http://127.0.0.1:5500',
+  'http://localhost:3000',
+  'http://localhost:5173',
+  'http://127.0.0.1:5173',
+];
 
 // *middlewares
 
-const allowedOrigins = [
-  // 'http://localhost:5500',
-  // 'http://127.0.0.1:5500',
-  // 'http://localhost:3000',
-  // 'http://localhost:5173',
-  // 'http://127.0.0.1:5173',
-];
+app.set('trust proxy', 1)
 
 app.use(cors({
   origin: (origin, callback) => {
     if (!origin || allowedOrigins.includes(origin)) {
       callback(null, true);
     } else {
-      callback(null, true);
-      // callback(new Error('Not allowed by CORS')); allow all origins
+      callback(new Error('Not allowed by CORS'))
     }
   },
   credentials: true
 }));
 
 app.use(globalLimiter);
-app.set('trust proxy', 1)
 app.use(express.json());
 app.use(jsonHandler);
 app.use(cookieParser());
 
-// *routes
+async function bootstrap() {
+  await connectDB();
+  initCalenderGenerator(process.env.RESET_CALENDAR === 'true');
 
-app.get('/', (req, res) => {
+  cron.schedule('0 6 * * *', () => generateTimePeriod(), { scheduled: true });
+
+  // *routes
+
+  app.get('/', (req, res) => {
     res.json({
-        message: 'Welome to school management system.',
-        metadata: {
-            api: "v1.0.0",
-            node: "v24.6.0",
-            npm: "v11.5.1",
-            mongodb: "v8.2.0"
-        }
+      message: 'Welcome to school management system.',
+      metadata: {
+        api: process.env.API_VERSION,
+        node: process.version,
+      }
     });
+  });
+
+  app.use('/api/v1/auth', authRoutes);
+  app.use('/api/v1/su', superUserRoutes);
+  app.use('/api/v1', systemRoutes);
+
+  // *404 handler
+  app.use((req, res) => {
+    res.status(404).json({ error: 'Route not found' });
+  });
+
+  // *global error handler
+  app.use((err, req, res, next) => {
+    pino_logger.error({ err }, 'Unhandled error');
+    res.status(err.status || 500).json({ error: err.message || 'Internal Server Error' });
+  });
+
+  app.listen(port, () => pino_logger.info({ port }, 'Server listening'));
+}
+
+bootstrap().catch(err => {
+  pino_logger.fatal({ err }, 'Failed to start server');
+  process.exit(1);
 });
 
-import authRoutes from './src/routes/authRoutes.js';
-import superUserRoutes from './src/routes/superUserRoutes.js';
-import systemRoutes from './src/routes/systemRoutes.js';
+// *exit gracefully of terminal signal
 
-app.use('/api/v1/auth', authRoutes);
-app.use('/api/v1/su', superUserRoutes);
-app.use('/api/v1', systemRoutes);
+process.on('SIGTERM', () => {
+  pino_logger.info('SIGTERM received, shutting down gracefully');
+  server.close(() => {
+    pino_logger.info('Server closed');
+    process.exit(0);
+  });
+});
 
-// *listener
+// *close server gracefully on (Ctrl+C)
 
-app.listen(port, () => {
-    console.log(`Listening on port => ${port}`);
+process.on('SIGINT', () => {
+  pino_logger.info('SIGINT received (Ctrl+C), shutting down');
+  server.close(() => {
+    pino_logger.info('Server closed');
+    process.exit(0);
+  });
 });
