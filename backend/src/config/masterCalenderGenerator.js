@@ -1,19 +1,21 @@
 import { startOfMonth, endOfMonth, format } from 'date-fns';
 import masterCalender from '../models/masterCalender.js';
+import pino_logger from '../utils/pino.js'
 
 export async function initCalenderGenerator(allowGenerate) {
     const currentYear = new Date().getFullYear();
     try {
         const currentCalender = await masterCalender.find({ assessmentYear: currentYear });
         if (currentCalender.length !== 12) {
-            console.log("Missing or Incorrect master calender, init with true to generate again. All holidays and configured data will be wiped out.")
+            pino_logger.error('Missing or invalid master calender');
             await masterCalender.deleteMany({});
             if (allowGenerate) {
+                pino_logger.info('Generating new master calender')
                 main(currentYear);
             }
         };
     } catch (error) {
-        console.error(error);
+        pino_logger.error({error: error}, 'Unknown error occured while initializing calender generator');
     }
 };
 
@@ -38,7 +40,7 @@ function generateCal(year, month) {
     return days;
 };
 
-export async function main(year) {
+async function main(year) {
     // Define months.
     const months = [0, 1, 2, 3, 4, 5, 6, 7, 8, 9, 10, 11];
     // Run a bucket creation for each month.
@@ -54,8 +56,8 @@ export async function main(year) {
             const newCalender = new masterCalender(bucket);
             await newCalender.save();
         } catch (error) {
-            throw new Error(error);
+            pino_logger.error({error: error}, 'Unknown error occured on the second stage of master calender generation')
         };
     };
-    console.log("Master Calender Generated!");
+    pino_logger.info('Master calender generared!')
 };

@@ -1,4 +1,5 @@
 import { addMinutes, subMinutes, set,} from 'date-fns';
+import pino_logger from '../utils/pino.js'
 
 import masterCalender from '../models/masterCalender.js';
 import configuration from '../models/configuration.js';
@@ -36,7 +37,7 @@ async function fetchDay(month, day) {
             dString: set(new Date(), { year: currentYear, month: month, date: requestedDay.day })
         };
     } catch (error) {
-        throw new Error(`Error fetching day: ${error.message}`);
+        pino_logger.error({error: error}, 'Unable to load fetch day')
     }
 }
 
@@ -65,7 +66,7 @@ const getTimeSpan = async (day, month) => {
 
         return { startDate, endDate, status: s.status };
     } catch (error) {
-        throw new Error(`Cannot get timestamp: ${error.message}`);
+        pino_logger.error({error: error}, 'Unable to get master timespans')
     }
 };
 
@@ -119,12 +120,12 @@ export const generateTimePeriod = async () => {
             // 5. Batch insert only the missing ones
             if (newEntries.length > 0) {
                 await timePeriod.insertMany(newEntries);
-                console.log(`Added ${newEntries.length} new records for ${role}.`);
+                pino_logger.info(`Added ${newEntries.length} new records for ${role}.`);
             } else {
-                console.log(`All ${role}s already have records for today.`);
+                pino_logger.info(`All ${role}s already have records for today.`);
             }
         }
     } catch (error) {
-        console.error("Scheduler Failed:", error);
+        pino_logger.error({error: error}, 'Scheduler failed');
     }
 };

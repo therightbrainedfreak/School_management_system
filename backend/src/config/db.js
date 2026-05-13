@@ -3,7 +3,7 @@ import mongoose from "mongoose";
 import pino_logger from '../utils/pino.js';
 
 const connectDB = async () => {
-  pino_logger.info('Connection to MongoDB')
+  pino_logger.info('Connecting to MongoDB')
   try {
     const conn = await mongoose.connect(process.env.MONGO_URI);
   } catch (error) {
