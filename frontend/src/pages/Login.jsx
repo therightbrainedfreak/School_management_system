@@ -1,17 +1,15 @@
 import React, { useEffect, useState } from "react";
-import { useNavigate, Navigate, useSearchParams } from "react-router-dom";
+import { useNavigate, Navigate } from "react-router-dom";
 import { AnimatePresence, motion } from "framer-motion";
 import { ToastContainer, toast, Slide } from 'react-toastify';
 
 import { ThreeDots } from "react-loader-spinner";
 import { FaArrowRight } from "react-icons/fa";
+import { IoEye, IoEyeOff } from "react-icons/io5";
 
 import { useAuth } from "../context/AuthContext";
 
 function LoginPage() {
-    const [searchParams] = useSearchParams();
-    const cPath = searchParams.get('cpath');
-    const dPath = '/'
 
     const ROLES = {
         STU: 'STUDENT',
@@ -29,6 +27,7 @@ function LoginPage() {
     const [inputError, setInputError] = useState('');
     const { user, login, logout } = useAuth();
     const [isLoading, setisLoading] = useState(false);
+    const [isPasswordVisible, setPasswordVisibility] = useState(false)
 
     const [ isAlertVisible, setAlertVisibility ] = useState(false);
 
@@ -73,7 +72,7 @@ function LoginPage() {
                 login(results.data.user);
                 toast.success("Login Success", {autoClose: 2000});
                 await new Promise(resolve => setTimeout(resolve, 2000))
-                navigate(cPath || dPath);
+                navigate('/');
             } else {
                 toast.error(results.error.message);
             }
@@ -156,15 +155,20 @@ function LoginPage() {
                 </AnimatePresence>
 
                 <AnimatePresence>
-                    <input
-                        className="border-b-2 my-2 outline-0 py-1"
-                        type="password"
-                        name="password"
-                        value={password}
-                        onChange={(e) => setPassword(e.target.value)}
-                        required
-                        placeholder="Password"
-                    />
+                    <div className="flex flex-row items-center justify-between gap-4">
+                        <input
+                            className="border-b-2 my-2 outline-0 py-1 w-full"
+                            type={isPasswordVisible ? 'text' : 'password'}
+                            name="password"
+                            value={password}
+                            onChange={(e) => setPassword(e.target.value)}
+                            required
+                            placeholder="Password"
+                        />
+                        <div className="flex items-center justify-center" onClick={()=>setPasswordVisibility(!isPasswordVisible)}>
+                            {isPasswordVisible ? <IoEyeOff size={'24px'} /> : <IoEye size={'24px'} />}
+                        </div>
+                    </div>
                 </AnimatePresence>
 
                 <div>

@@ -11,7 +11,7 @@ import {
 import { authenticate } from "../middlewares/authenticator.js";
 import { authorise } from "../middlewares/authoriser.js";
 import { identifier } from "../controllers/authController.js";
-import { categories, composeBlog, suggestions, tags } from "../controllers/blogController.js";
+import { categories, composeBlog, getMyBlogs, suggestions, tags } from "../controllers/blogController.js";
 
 const route = Router();
 
@@ -29,7 +29,8 @@ route.get('/student_applications/:appRef', authenticate, authorise("admin", "sup
 
 // ****************** BLOG ROUTES ****************** //
 
-route.post('/blog', authenticate, authorise('admin', 'superuser'), composeBlog);
+route.post('/blogs', authenticate, authorise('admin', 'superuser', 'student', 'parent', 'teacher'), composeBlog);
+route.get('/blogs/mine', authenticate, authorise('admin', 'superuser', 'student', 'parent', 'teacher'), getMyBlogs);
 
 route.get('/blogs/bss', suggestions)
 route.get('/blogs/categories', categories);

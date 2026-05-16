@@ -26,7 +26,11 @@ const blogSchema = new mongoose.Schema({
     },
     title: { type: String, required: true },
     content: { type: String, required: true },
-    isAvailable: { type: Boolean, default: true }
+    isAvailable: { type: Boolean, default: true },
+    status: {
+        state: { type: String, enum: ['DRAFT', 'REVIEW', 'LIVE', 'REJECTED'], default: 'DRAFT' },
+        reasonForRejection: { type: String }
+    }
 }, {
     timestamps: true
 })

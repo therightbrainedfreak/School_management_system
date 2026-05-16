@@ -3,6 +3,7 @@ import 'dotenv/config';
 import bcrypt from 'bcrypt';
 import jwt from 'jsonwebtoken';
 import { logger } from '../utils/logger.js';
+import pino_logger from '../utils/pino.js'
 
 import admin from '../models/admin.js';
 import student from '../models/student.js';

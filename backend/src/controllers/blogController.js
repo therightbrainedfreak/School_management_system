@@ -1,6 +1,9 @@
+import 'dotenv/config'
 import blog from "../models/blog.js";
 import blogComment from "../models/blogComment.js";
 import { sanitizeHTML } from "../utils/utils.js";
+import mongoose from 'mongoose'
+import { logger } from '../utils/logger.js';
 
 export const blogTags = [
   // --- SUBJECTS ---
@@ -493,17 +496,18 @@ const sanitizeText = (val, max) =>
     typeof val === 'string' ? val.trim().replace(/\s+/g, ' ').replace(/[^\x20-\x7E]/g, '').slice(0, max) : undefined;
 
 export const composeBlog = async (req, res) => {
-    // Extract Author data
+    // Safe extract Author data
     const authorId = req.user?.id;
     const authorRole = req.user?.role;
     const autherName = req.user?.name;
 
-    // Extract Blog data (e.g., title, content, )
+    // Safe extract Blog data (e.g., title, content, )
     const category = req.body?.category;
     const title = req.body?.title;
     const content = req.body?.content;
     const tags = req.body?.tags;
 
+    // Null check
     if (!category || !title || !content || !tags) {
         return res.status(400).json({
             success: false,
@@ -514,11 +518,28 @@ export const composeBlog = async (req, res) => {
             },
             metadata: {
                 server_time: Date.now(),
-                version: "v1.0.0"
+                version: process.env.API_VERSION || 'v0.0.0'
             }
         });
     }
 
+    // Malformation check
+    if (typeof (category) !== 'string' || typeof (title) !== 'string' || typeof (content) !== 'string') {
+        return res.status(400).json({
+            success: false,
+            status: 400,
+            error: {
+                code: "INVALID_DATA",
+                message: "Malformed data provided."
+            },
+            metadata: {
+                server_time: Date.now(),
+                version: process.env.API_VERSION || 'v0.0.0'
+            }
+        });
+    }
+
+    // tags array check
     if (!Array.isArray(req.body.tags)) {
         return res.status(422).json({
             success: false,
@@ -529,7 +550,7 @@ export const composeBlog = async (req, res) => {
             },
             metadata: {
                 server_time: Date.now(),
-                version: "v1.0.0"
+                version: process.env.API_VERSION || 'v0.0.0'
             }
         });
     }
@@ -540,7 +561,8 @@ export const composeBlog = async (req, res) => {
     const s_tags = tags.map(tag => sanitizeText(tag, 20));
     const s_content = sanitizeHTML(content);
     
-    const blog = {
+    // Define blog payload
+    const blogPayload = {
         author: {
             id: authorId,
             role: authorRole,
@@ -554,7 +576,72 @@ export const composeBlog = async (req, res) => {
         content: s_content
     }
 
-    res.json({blog})
+    const tSession = await mongoose.startSession()
+
+    try {
+        tSession.startTransaction()
+        const newBlog = new blog(blogPayload);
+        await newBlog.save({
+            session: tSession
+        });
+        await tSession.commitTransaction();
+        res.json({
+            success: true,
+            status: 200,
+            data: {
+                message: "New Blog Created and will be live after review"
+            },
+            metadata: {
+                server_time: Date.now(),
+                version: process.env.API_VERSION || 'v0.0.0'
+            }
+        });
+    } catch (error) {
+        await tSession.abortTransaction()
+        if (error.name === "ValidationError") {
+            let errors = {};
+            Object.keys(error.errors).forEach((key) => {
+                errors[key] = error.errors[key].message;
+            });
+            return res.status(422).json({
+                success: false,
+                status: 422,
+                error: {
+                    code: "VALIDATION_ERROR",
+                    message: "Incomplete data provided.",
+                    eFields: errors
+                },
+                metadata: {
+                    server_time: Date.now(),
+                    version: process.env.API_VERSION || 'v0.0.0'
+                }
+            });
+        };
+        logger({
+            level: 'error',
+            origin: 'mainService',
+            originName: 'blogController',
+            message: 'Error creating new blog',
+            metadata: {
+                userType: req.user?.role
+            },
+            stackTrace: error
+        });
+        res.status(500).json({
+            success: false,
+            status: 500,
+            error: {
+                code: "INTERNAL_ERROR",
+                message: "Unexpected error occured while creating new blog."
+            },
+            metadata: {
+                server_time: Date.now(),
+                version: process.env.API_VERSION || 'v0.0.0'
+            }
+        });
+    } finally {
+        await tSession.endSession;
+    }
 }
 
 export const categories = (req, res) => {
@@ -566,7 +653,7 @@ export const categories = (req, res) => {
         },
         metadata: {
             server_time: Date.now(),
-            version: "v1.0.0"
+            version: process.env.API_VERSION || 'v0.0.0'
         }
     });
 }
@@ -583,7 +670,7 @@ export const suggestions = (req, res) => {
             },
             metadata: {
                 server_time: Date.now(),
-                version: "v1.0.0"
+                version: process.env.API_VERSION || 'v0.0.0'
             }
         });
     }
@@ -596,7 +683,7 @@ export const suggestions = (req, res) => {
         },
         metadata: {
             server_time: Date.now(),
-            version: "v1.0.0"
+            version: process.env.API_VERSION || 'v0.0.0'
         }
     });
 }
@@ -610,7 +697,66 @@ export const tags = (req, res) => {
         },
         metadata: {
             server_time: Date.now(),
-            version: "v1.0.0"
+            version: process.env.API_VERSION || 'v0.0.0'
         }
     });
+}
+
+export const getMyBlogs = async (req, res) => {
+    // Safe extract user details from the request token
+    const userId = req.user?.id;
+    const userRole = req.user?.role;
+    const userName = req.user?.name;
+
+    try {
+        const userBlogs = await blog.find({'author.id': userId}).select('author metadata title status blogId')
+        if (userBlogs.length <= 0) {
+            return res.status(404).json({
+                success: false,
+                status: 404,
+                error: {
+                    code: "NOT_FOUND",
+                    message: "No blogs found",
+                },
+                metadata: {
+                    server_time: Date.now(),
+                    version: process.env.API_VERSION || 'v0.0.0'
+                }
+            });
+        }
+        return res.json({
+            success: true,
+            status: 200,
+            data: {
+                blogs: userBlogs
+            },
+            metadata: {
+                server_time: Date.now(),
+                version: process.env.API_VERSION || 'v0.0.0'
+            }
+        });
+    } catch (error) {
+        logger({
+            level: 'error',
+            origin: 'mainService',
+            originName: 'blogController',
+            message: 'Error finding blogs',
+            metadata: {
+                userType: req.user?.role
+            },
+            stackTrace: error
+        });
+        res.status(500).json({
+            success: false,
+            status: 500,
+            error: {
+                code: "INTERNAL_ERROR",
+                message: "Unexpected error occured while finding blogs."
+            },
+            metadata: {
+                server_time: Date.now(),
+                version: process.env.API_VERSION || 'v0.0.0'
+            }
+        });
+    }
 }
