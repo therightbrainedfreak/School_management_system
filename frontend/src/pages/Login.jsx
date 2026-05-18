@@ -72,7 +72,7 @@ function LoginPage() {
                 login(results.data.user);
                 toast.success("Login Success", {autoClose: 2000});
                 await new Promise(resolve => setTimeout(resolve, 2000))
-                navigate('/');
+                navigate('/', {replace: true});
             } else {
                 toast.error(results.error.message);
             }

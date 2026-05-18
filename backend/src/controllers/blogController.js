@@ -4,6 +4,7 @@ import blogComment from "../models/blogComment.js";
 import { sanitizeHTML } from "../utils/utils.js";
 import mongoose from 'mongoose'
 import { logger } from '../utils/logger.js';
+import { format } from 'date-fns';
 
 export const blogTags = [
   // --- SUBJECTS ---
@@ -492,6 +493,8 @@ const blogSearchSuggestions = [
   "tips for choosing high school electives"
 ];
 
+const formatDate = (date) => format(new Date(date), 'dd/MM/yyyy | HH:mm');
+
 const sanitizeText = (val, max) => 
     typeof val === 'string' ? val.trim().replace(/\s+/g, ' ').replace(/[^\x20-\x7E]/g, '').slice(0, max) : undefined;
 
@@ -506,15 +509,31 @@ export const composeBlog = async (req, res) => {
     const title = req.body?.title;
     const content = req.body?.content;
     const tags = req.body?.tags;
+    const isNew = req.body?.isNew;
 
     // Null check
-    if (!category || !title || !content || !tags) {
+    if (!category || !title || !content || !tags || !isNew) {
         return res.status(400).json({
             success: false,
             status: 400,
             error: {
                 code: "INVALID_DATA",
                 message: "Incomplete data provided."
+            },
+            metadata: {
+                server_time: Date.now(),
+                version: process.env.API_VERSION || 'v0.0.0'
+            }
+        });
+    }
+
+    if (isNew !== true) {
+        return res.status(422).json({
+            success: false,
+            status: 422,
+            error: {
+                code: "UNINTENTIONAL",
+                message: "Unintentional route hit."
             },
             metadata: {
                 server_time: Date.now(),
@@ -556,8 +575,8 @@ export const composeBlog = async (req, res) => {
     }
 
     // Sanitize data
-    const s_category = sanitizeText(category, 20);
-    const s_title = sanitizeText(title, 70);
+    const s_category = sanitizeText(category, 40);
+    const s_title = sanitizeText(title, 100);
     const s_tags = tags.map(tag => sanitizeText(tag, 20));
     const s_content = sanitizeHTML(content);
     
@@ -709,7 +728,7 @@ export const getMyBlogs = async (req, res) => {
     const userName = req.user?.name;
 
     try {
-        const userBlogs = await blog.find({'author.id': userId}).select('author metadata title status blogId')
+        const userBlogs = await blog.find({'author.id': userId, isAvailable: true}).select('author metadata title status blogId createdAt updatedAt')
         if (userBlogs.length <= 0) {
             return res.status(404).json({
                 success: false,
@@ -724,11 +743,33 @@ export const getMyBlogs = async (req, res) => {
                 }
             });
         }
-        return res.json({
+        const alteredBlogs = [];
+
+        for (const blog of userBlogs) {
+            const payload = {
+                author: {
+                    name: blog.author.name,
+                    role: blog.author.role
+                },
+                metadata: {
+                    category: blog.metadata.category,
+                    tags: blog.metadata.tags,
+                    likes: blog.metadata.likes.length
+                },
+                title: blog.title,
+                status: blog.status,
+                blogId: blog.blogId,
+                createdAt: formatDate(blog.createdAt),
+                updatedAt: formatDate(blog.updatedAt)
+            }
+            alteredBlogs.push(payload)
+        }
+
+        res.json({
             success: true,
             status: 200,
             data: {
-                blogs: userBlogs
+                blogs: alteredBlogs
             },
             metadata: {
                 server_time: Date.now(),
@@ -739,7 +780,7 @@ export const getMyBlogs = async (req, res) => {
         logger({
             level: 'error',
             origin: 'mainService',
-            originName: 'blogController',
+            originName: 'getMyBlogs',
             message: 'Error finding blogs',
             metadata: {
                 userType: req.user?.role
@@ -758,5 +799,302 @@ export const getMyBlogs = async (req, res) => {
                 version: process.env.API_VERSION || 'v0.0.0'
             }
         });
+    }
+}
+
+export const getSpBlog = async (req, res) => {
+    const userId = req.user?.id;
+    const userRole = req.user?.role;
+    const userName = req.user?.name;
+
+    const blogId = req.params.viewId
+
+    if (!blogId) {
+        res.status(400).json({
+            success: false,
+            status: 400,
+            error: {
+                code: "INCOMPLETE_DATA",
+                message: "Blog id not provided."
+            },
+            metadata: {
+                server_time: Date.now(),
+                version: process.env.API_VERSION || 'v0.0.0'
+            }
+        });
+    }
+
+    try {
+        const ublog = await blog.findOne({ blogId: blogId, isAvailable: true }) 
+        if (!ublog) {
+            return res.status(404).json({
+                success: false,
+                status: 404,
+                error: {
+                    code: "NOT_FOUND",
+                    message: "No blog found or Invalid blog id",
+                },
+                metadata: {
+                    server_time: Date.now(),
+                    version: process.env.API_VERSION || 'v0.0.0'
+                }
+            });
+        }
+
+        const payload = {
+            author: {
+                name: ublog.author.name,
+                role: ublog.author.role
+            },
+            reviewer: {
+                name: ublog.reviewer.name,
+                role: ublog.reviewer.role
+            },
+            metadata: {
+                category: ublog.metadata.category,
+                tags: ublog.metadata.tags,
+                likes: ublog.metadata.likes.length
+            },
+            title: ublog.title,
+            content: ublog.content,
+            isAvailable: ublog.isAvailable,
+            status: ublog.status
+        }
+
+        res.json({
+            success: true,
+            status: 200,
+            data: {
+                blog: payload
+            },
+            metadata: {
+                server_time: Date.now(),
+                version: process.env.API_VERSION || 'v0.0.0'
+            }
+        });
+
+    } catch (error) {
+        logger({
+            level: 'error',
+            origin: 'mainService',
+            originName: 'getSpBlog',
+            message: 'Error finding blog',
+            metadata: {
+                userType: req.userRole
+            },
+            stackTrace: error
+        });
+        res.status(500).json({
+            success: false,
+            status: 500,
+            error: {
+                code: "INTERNAL_ERROR",
+                message: "Unexpected error occured while finding blog."
+            },
+            metadata: {
+                server_time: Date.now(),
+                version: process.env.API_VERSION || 'v0.0.0'
+            }
+        });
+    }
+}
+
+export const updateBlog = async (req, res) => {
+    const userId = req.user?.id;
+    const blogId = req.params?.blogId
+
+    const category = req.body?.category;
+    const title = req.body?.title;
+    const content = req.body?.content;
+    const tags = req.body?.tags;
+    const isNew = req.body?.isNew;
+
+    // Null check and blog Id is just a custom string
+    if (!category || !title || !content || !tags || !blogId) {
+        return res.status(400).json({
+            success: false,
+            status: 400,
+            error: {
+                code: "INVALID_DATA",
+                message: "Incomplete data provided."
+            },
+            metadata: {
+                server_time: Date.now(),
+                version: process.env.API_VERSION || 'v0.0.0'
+            }
+        });
+    }
+
+    if (isNew !== false) {
+        return res.status(422).json({
+            success: false,
+            status: 422,
+            error: {
+                code: "UNINTENTIONAL",
+                message: "Unintentional route hit."
+            },
+            metadata: {
+                server_time: Date.now(),
+                version: process.env.API_VERSION || 'v0.0.0'
+            }
+        });
+    }
+
+    // Malformation check
+    if (typeof (category) !== 'string' || typeof (title) !== 'string' || typeof (content) !== 'string') {
+        return res.status(400).json({
+            success: false,
+            status: 400,
+            error: {
+                code: "INVALID_DATA",
+                message: "Malformed data provided."
+            },
+            metadata: {
+                server_time: Date.now(),
+                version: process.env.API_VERSION || 'v0.0.0'
+            }
+        });
+    }
+
+    // tags array check
+    if (!Array.isArray(tags)) {
+        return res.status(422).json({
+            success: false,
+            status: 422,
+            error: {
+                code: "INVALID_DATA",
+                message: "Tags must be an Array."
+            },
+            metadata: {
+                server_time: Date.now(),
+                version: process.env.API_VERSION || 'v0.0.0'
+            }
+        });
+    }
+
+    // Sanitize data (every tag is isolated means its first fetched from the server predefined and chosen by the client and then sent back to then sanitized)
+    const s_category = sanitizeText(category, 40);
+    const s_title = sanitizeText(title, 100);
+    const s_tags = tags.map(tag => sanitizeText(tag, 20));
+    const s_content = sanitizeHTML(content);
+    
+    const tSession = await mongoose.startSession()
+
+    try {
+        tSession.startTransaction();
+
+        const userBlog = await blog.findOne({blogId: blogId}, null, {session: tSession}).select('author');
+
+        if (!userBlog) {
+            await tSession.abortTransaction();
+            return res.status(404).json({
+                success: false,
+                status: 404,
+                error: {
+                    code: "NOT_FOUND",
+                    message: "requested data not found."
+                },
+                metadata: {
+                    server_time: Date.now(),
+                    version: process.env.API_VERSION || 'v0.0.0'
+                }
+            });
+        }
+
+        if (userBlog.author.id !== userId) {
+            await tSession.abortTransaction();
+            return res.status(403).json({
+                success: false,
+                status: 403,
+                error: {
+                    code: "NOT_ALLOWED",
+                    message: "User not allowed to perform this action."
+                },
+                metadata: {
+                    server_time: Date.now(),
+                    version: process.env.API_VERSION || 'v0.0.0'
+                }
+            });
+        }
+
+        const pushUpdate = await blog.updateOne(
+            { blogId: blogId },
+            { $set: {
+                    'metadata.category': s_category,
+                    'metadata.tags': s_tags,
+                    title: s_title,
+                    content: s_content,
+                    'status.state': "DRAFT",
+                }
+            },
+            { session: tSession }
+        )
+
+        if (!pushUpdate.acknowledged) {
+            throw new Error('Not updated')
+        }
+
+        await tSession.commitTransaction()
+
+        res.json({
+            success: true,
+            status: 200,
+            data: {
+                message: 'Updated!'
+            },
+            metadata: {
+                server_time: Date.now(),
+                version: process.env.API_VERSION || 'v0.0.0'
+            }
+        });
+
+
+    } catch (error) {
+        await tSession.abortTransaction()
+        if (error.name === "ValidationError") {
+            let errors = {};
+            Object.keys(error.errors).forEach((key) => {
+                errors[key] = error.errors[key].message;
+            });
+            return res.status(422).json({
+                success: false,
+                status: 422,
+                error: {
+                    code: "VALIDATION_ERROR",
+                    message: "Incomplete data provided.",
+                    eFields: errors
+                },
+                metadata: {
+                    server_time: Date.now(),
+                    version: process.env.API_VERSION || 'v0.0.0'
+                }
+            });
+        };
+        logger({
+            level: 'error',
+            origin: 'mainService',
+            originName: 'updateBlog',
+            message: 'Error updating blog',
+            metadata: {
+                userType: req.user?.role,
+                userId: req.user?.id,
+                orderId: blogId
+            },
+            stackTrace: error
+        });
+        res.status(500).json({
+            success: false,
+            status: 500,
+            error: {
+                code: "INTERNAL_ERROR",
+                message: "Unexpected error occured while updating."
+            },
+            metadata: {
+                server_time: Date.now(),
+                version: process.env.API_VERSION || 'v0.0.0'
+            }
+        });
+    } finally {
+        await tSession.endSession();
     }
 }

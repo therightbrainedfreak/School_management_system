@@ -45,7 +45,8 @@ const allowedOrigins = [
   'http://localhost:3000',
   'http://localhost:5173',
   'http://127.0.0.1:5173',
-  'http://192.168.29.124:5173'
+  'http://192.168.29.124:5173',
+  'http://10.54.225.139:5173'
 ];
 
 // *middlewares

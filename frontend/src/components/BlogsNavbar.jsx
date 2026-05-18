@@ -27,7 +27,9 @@ function BlogsNavbar() {
                     className="t-bg hover:bg-mauve-900 hover:text-white text-sm flex items-center justify-center gap-1 bg-gray-200 rounded-md h-9 pl-4 pr-3">
                         Compose <RiAddCircleLine size={"18px"}/>
                     </button>
-                    <button className="t-bg hover:bg-mauve-900 hover:text-white text-sm box-border flex items-center justify-center gap-1 bg-gray-200 rounded-md h-9 pl-4 pr-3">
+                    <button
+                    onClick={()=>{navigate('/blogs/mine')}}
+                    className="t-bg hover:bg-mauve-900 hover:text-white text-sm box-border flex items-center justify-center gap-1 bg-gray-200 rounded-md h-9 pl-4 pr-3">
                         Mine <RiAccountCircle2Line size={"18px"}/>
                     </button>
                 </div>

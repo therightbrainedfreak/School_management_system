@@ -37,3 +37,12 @@ body {
   min-height: 300px;
   font-size: 16px;
 }
+
+.special-content-div  p {
+    word-break: keep-all;
+}
+
+.special-content-div h1, h2, h2, h4, h5 {
+    word-break: keep-all;
+    margin-top: 10px;
+}
