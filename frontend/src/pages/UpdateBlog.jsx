@@ -66,7 +66,15 @@ function UpdateBlog() {
     if (!blog) return <div className="max-sm:mx-4 flex items-center justify-center py-10"><Loader/></div>
 
     return (
-        <BlogEditor type={'update'} pTitle={"UPDATE"} allowDraft={false} submissionPath={submissionPath} blogId={blogId} blogData={blog}/>
+        <BlogEditor
+            type={'update'}
+            pTitle={"UPDATE"}
+            allowDraft={false}
+            submissionPath={submissionPath}
+            blogId={blogId}
+            blogData={blog}
+            redirect={'/blogs/mine'}
+        />
     )
 }
 

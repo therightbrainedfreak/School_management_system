@@ -15,8 +15,8 @@ function MBlog({cAt, uAt, author, metadata, status, title, blogId, setSearchPara
                 <div className="text-sm">{`${author.name.toLowerCase()}, ${author.role}`}</div>
             </div>
             <div className="absolute right-2 bottom-2 text-[10px] flex flex-col mt-1">
-                <span>C {cAt}</span>
-                <span>U {uAt}</span>
+                <span>CR: {cAt}</span>
+                <span>LU: {uAt}</span>
             </div>
         </div>
     )

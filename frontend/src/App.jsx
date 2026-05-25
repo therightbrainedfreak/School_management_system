@@ -1,7 +1,7 @@
 import './App.css'
 import { Routes, Route, useLocation } from 'react-router-dom'
 import Landing from './pages/Landing'
-import LoginPage from './pages/Login'
+// import LoginPage from './pages/Login'
 import Navbar from './components/Navbar'
 import Footer from './components/Footer'
 import CodeOfConduct from './pages/CodeOfConduct'
@@ -16,6 +16,7 @@ import PageTransition from './components/PageTransition'
 import ComposeBlog from './pages/ComposeBlog'
 import MyBlogs from './pages/MyBlogs'
 import UpdateBlog from './pages/UpdateBlog'
+import AuthWrapper from './pages/AuthWrapper'
 
 function App() {
   const location = useLocation();
@@ -32,11 +33,15 @@ function App() {
           </PageTransition>
         } />
 
-        <Route path="/login" element={
+        {/* <Route path="/login" element={
           <PageTransition>
-            <Navbar />
             <LoginPage />
-            <Footer />
+          </PageTransition>
+        } /> */}
+
+        <Route path="/auth" element={
+          <PageTransition>
+            <AuthWrapper />
           </PageTransition>
         } />
 

@@ -45,7 +45,7 @@ function Navbar() {
                         }}
                     >
                         <li className='menu-link' onClick={() => {
-                            navigate('/login')
+                            navigate('/auth?action=login')
                             alterMenuState(!isOpen)
                         }}
                         >

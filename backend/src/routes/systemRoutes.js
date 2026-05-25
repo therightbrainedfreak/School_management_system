@@ -1,4 +1,4 @@
-import { response, Router } from "express";
+import { Router } from "express";
 
 import {
     getStudentApplications,
@@ -11,7 +11,16 @@ import {
 import { authenticate } from "../middlewares/authenticator.js";
 import { authorise } from "../middlewares/authoriser.js";
 import { identifier } from "../controllers/authController.js";
-import { categories, composeBlog, getMyBlogs, suggestions, tags, getSpBlog, updateBlog } from "../controllers/blogController.js";
+import {
+    categories,
+    composeBlog,
+    getMyBlogs,
+    suggestions,
+    tags,
+    getSpBlog,
+    updateBlog,
+    softDeleteBlog
+} from "../controllers/blogController.js";
 
 const route = Router();
 
@@ -29,13 +38,14 @@ route.get('/student_applications/:appRef', authenticate, authorise("admin", "sup
 
 // ****************** BLOG ROUTES ****************** //
 
-route.post('/blogs', authenticate, authorise('admin', 'superuser', 'student', 'parent', 'teacher'), composeBlog);
-route.post('/blogs/:blogId', authenticate, authorise('admin', 'superuser', 'student', 'parent', 'teacher'), updateBlog);
-route.get('/blogs/mine', authenticate, authorise('admin', 'superuser', 'student', 'parent', 'teacher'), getMyBlogs);
-route.get('/blogs/mine/:viewId', authenticate, authorise('admin', 'superuser', 'student', 'parent', 'teacher'), getSpBlog);
+route.post('/blogs', authenticate, authorise('admin', 'superuser', 'student', 'parent', 'teacher'), composeBlog); // Create new blog.
+route.put('/blogs/:blogId', authenticate, authorise('admin', 'superuser', 'student', 'parent', 'teacher'), updateBlog); // Update a blog.
+route.get('/blogs/mine', authenticate, authorise('admin', 'superuser', 'student', 'parent', 'teacher'), getMyBlogs); // Get user blogs.
+route.get('/blogs/mine/:viewId', authenticate, authorise('admin', 'superuser', 'student', 'parent', 'teacher'), getSpBlog); // Get user's specific blog.
+route.delete('/blogs/:blogId', authenticate, authorise('admin', 'superuser', 'student', 'parent', 'teacher'), softDeleteBlog); // delete a blog.
 
-route.get('/blogs/bss', suggestions)
-route.get('/blogs/categories', categories);
-route.get('/blogs/tags', tags);
+route.get('/blogs/bss', suggestions) // Blog suggestions.
+route.get('/blogs/categories', categories); // Blog categories.
+route.get('/blogs/tags', tags); // Blog tags.
 
 export default route;

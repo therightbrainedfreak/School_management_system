@@ -5,6 +5,7 @@ import { sanitizeHTML } from "../utils/utils.js";
 import mongoose from 'mongoose'
 import { logger } from '../utils/logger.js';
 import { format } from 'date-fns';
+import pino_logger from '../utils/pino.js';
 
 export const blogTags = [
   // --- SUBJECTS ---
@@ -1095,6 +1096,173 @@ export const updateBlog = async (req, res) => {
             }
         });
     } finally {
+        await tSession.endSession();
+    }
+}
+
+export const softDeleteBlog = async (req, res) => {
+    // Extract user data & blog id from request
+    const userId = req.user?.id;
+    const blogId = req.params.blogId;
+
+    // Null check blog id
+    if (!blogId) {
+        return res.status(400).json({
+            success: false,
+            status: 400,
+            error: {
+                code: "INVALID_DATA",
+                message: "Incomplete data provided."
+            },
+            metadata: {
+                server_time: Date.now(),
+                version: process.env.API_VERSION || 'v0.0.0'
+            }
+        });
+    }
+
+    // Create mongoose transaction session.
+    const tSession = await mongoose.startSession();
+
+    try {
+        // Start the transaction.
+        tSession.startTransaction();
+        
+        // Find the requested blog from the server.
+        const requestedBlog = await blog.findOne({blogId: blogId}, null, { session: tSession }).select('author status isAvailable');
+
+        // Check if the requested blog exists.
+        if (!requestedBlog) {
+            await tSession.abortTransaction();
+            return res.status(404).json({
+                success: false,
+                status: 404,
+                error: {
+                    code: "NOT_FOUND",
+                    message: "Requested content is not available"
+                },
+                metadata: {
+                    server_time: Date.now(),
+                    version: process.env.API_VERSION || 'v0.0.0'
+                }
+            })
+        }
+
+        // Check if the author made the deletion
+        if (requestedBlog.author.id !== userId) {
+            await tSession.abortTransaction();
+            return res.status(403).json({
+                success: false,
+                status: 403,
+                error: {
+                    code: "NOT_ALLOWED",
+                    message: "User not allowed to perform this action."
+                },
+                metadata: {
+                    server_time: Date.now(),
+                    version: process.env.API_VERSION || 'v0.0.0'
+                }
+            });
+        }
+
+        // Update the blog availability flag to false.
+        const alterAvailability = await blog.updateOne(
+            {blogId: blogId},
+            {
+                $set: {
+                    isAvailable: false
+                }
+            },
+            { session: tSession }
+        )
+
+        // Check if the update is acknowledged.
+        if (!alterAvailability.acknowledged) {
+            throw new Error('Not disabled/ soft deleted')
+        }
+
+        // Log the deletion for audit purposes
+        logger({
+            level: 'info',
+            origin: 'mainService',
+            originName: 'softDeleteBlog',
+            message: 'Blog made unavailable',
+            metadata: {
+                userType: req.user?.role,
+                userId: req.user?.id,
+                orderId: blogId
+            }
+        });
+
+        // Commit all db transactions.
+        await tSession.commitTransaction();
+
+        res.json({
+            success: true,
+            status: 200,
+            data: {
+                message: 'Updated!'
+            },
+            metadata: {
+                server_time: Date.now(),
+                version: process.env.API_VERSION || 'v0.0.0'
+            }
+        });
+
+    } catch (error) {
+        // Abort transaction on error
+        await tSession.abortTransaction();
+
+        // Check for mongoose validation errors
+        if (error.name === "ValidationError") {
+            let errors = {};
+            Object.keys(error.errors).forEach((key) => {
+                errors[key] = error.errors[key].message;
+            });
+            return res.status(422).json({
+                success: false,
+                status: 422,
+                error: {
+                    code: "VALIDATION_ERROR",
+                    message: "Incomplete data provided.",
+                    eFields: errors
+                },
+                metadata: {
+                    server_time: Date.now(),
+                    version: process.env.API_VERSION || 'v0.0.0'
+                }
+            });
+        };
+
+        // Log the error
+        logger({
+            level: 'error',
+            origin: 'mainService',
+            originName: 'softDeleteBlog',
+            message: 'Error deleting blog',
+            metadata: {
+                userType: req.user?.role,
+                userId: req.user?.id,
+                orderId: blogId
+            },
+            stackTrace: error
+        });
+
+        // Respond with error
+        res.status(500).json({
+            success: false,
+            status: 500,
+            error: {
+                code: "INTERNAL_ERROR",
+                message: "Unexpected error occured while deleting."
+            },
+            metadata: {
+                server_time: Date.now(),
+                version: process.env.API_VERSION || 'v0.0.0'
+            }
+        });
+    } finally {
+        // Final close the session
         await tSession.endSession();
     }
 }

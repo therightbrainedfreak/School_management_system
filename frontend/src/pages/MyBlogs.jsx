@@ -93,9 +93,11 @@ function MyBlogs() {
             />
 
             <MyBlogsNavbar/>
+
             <div className="flex flex-col gap-2 my-2">
                 <RenBlogs/>
             </div>
+            
         </div>
     )
 }

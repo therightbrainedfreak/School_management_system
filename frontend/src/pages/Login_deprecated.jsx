@@ -4,7 +4,7 @@ import { AnimatePresence, motion } from "framer-motion";
 import { ToastContainer, toast, Slide } from 'react-toastify';
 
 import { ThreeDots } from "react-loader-spinner";
-import { FaArrowRight } from "react-icons/fa";
+import { FaArrowRight, FaArrowLeft } from "react-icons/fa";
 import { IoEye, IoEyeOff } from "react-icons/io5";
 
 import { useAuth } from "../context/AuthContext";
@@ -70,9 +70,8 @@ function LoginPage() {
             const results = await response.json();
             if (results.success) {
                 login(results.data.user);
-                toast.success("Login Success", {autoClose: 2000});
-                await new Promise(resolve => setTimeout(resolve, 2000))
-                navigate('/', {replace: true});
+                toast.success("Login Success", {autoClose: 1000});
+                await new Promise(resolve => setTimeout(resolve, 1100))
             } else {
                 toast.error(results.error.message);
             }
@@ -101,7 +100,7 @@ function LoginPage() {
     }
 
     return (
-        <div className="max-sm:mx-4 p-8">
+        <div className="flex items-center justify-center h-100">
 
         <ToastContainer
             position="top-center"
@@ -171,17 +170,21 @@ function LoginPage() {
                     </div>
                 </AnimatePresence>
 
-                <div>
+                <div className="flex items-center justify-center h-fit gap-2 mt-6">
+                    <button
+                        className={`w-full border-2 border-gray-900 font-bold p-2 rounded-md bg-red-300 flex items-center justify-center`}
+                        onClick={() => { navigate(-1) }}
+                    >
+                        {null ? <LoginLoader /> : <div className="flex items-center gap-2"><FaArrowLeft size={"12px"}/>Cancel</div>}
+                    </button>
                     <button
                         type="submit"
-                        className={`w-full border-2 border-gray-900 font-bold mt-6 p-2 rounded-md bg-blue-300 flex items-center justify-center`}
+                        className={`w-full border-2 border-gray-900 font-bold p-2 rounded-md bg-blue-300 flex items-center justify-center`}
                         disabled={inputError ? true : isLoading ? true : false}
                     >
-                        {isLoading ? <LoginLoader/> : <div className="flex items-center gap-2">Login <FaArrowRight size={"12px"}/></div>}
+                        {isLoading ? <LoginLoader /> : <div className="flex items-center gap-2">Login <FaArrowRight size={"12px"} /></div>}
                     </button>
                 </div>
-
-                <p className="text-center mt-4 text-blue-400 underline">Forget credentials</p>
 
             </form>
 

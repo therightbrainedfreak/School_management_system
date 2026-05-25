@@ -9,8 +9,9 @@ import { ToastContainer, toast, Slide } from 'react-toastify';
 import { ThreeDots } from "react-loader-spinner";
 import ReactQuill from 'react-quill-new'
 import 'react-quill-new/dist/quill.snow.css'
+import { useNavigate } from 'react-router-dom';
 
-function BlogEditor({ pTitle, type, allowDraft, blogId, blogData, submissionPath }) {
+function BlogEditor({ pTitle, type, allowDraft, blogId, blogData, submissionPath, redirect }) {
 
     if (type === "update") {
         if (!blogId) return <div>Error: Blog Id is required for update</div>
@@ -18,6 +19,7 @@ function BlogEditor({ pTitle, type, allowDraft, blogId, blogData, submissionPath
         if (!submissionPath) return <div>Error: Submission path required</div>
     }
 
+    // actual blog data
     const [title, setTitle] = useState('')
     const [content, setContent] = useState('')
     const [category, setCategory] = useState('')
@@ -45,11 +47,14 @@ function BlogEditor({ pTitle, type, allowDraft, blogId, blogData, submissionPath
     const [isCategoriesLoading, setCategoriesLoading] = useState(true)
     const [isTagsLoading, setTagsLoading] = useState(true)
     const [blogTags, setBlogTags] = useState([])
-
     const [isSavingDraft, setSavingDraft] = useState(false);
 
+    const navigate = useNavigate();
+
+    // Sync localstorage stored draft if draft allowed
     useEffect(() => {
         if (allowDraft !== true) return;
+
         const savedDraft = localStorage.getItem('draftBlog');
         if (!savedDraft) return;
 
@@ -64,6 +69,7 @@ function BlogEditor({ pTitle, type, allowDraft, blogId, blogData, submissionPath
         }
     }, []);
 
+    // Set previous data for updation
     useEffect(() => {
         if (type !== "update" || !blogData || !blogData.metadata) return;
         setTitle(blogData.title || '');
@@ -72,6 +78,7 @@ function BlogEditor({ pTitle, type, allowDraft, blogId, blogData, submissionPath
         setTags(blogData.metadata?.tags || []);
     }, [blogData]);
 
+    // load tags from server
     useEffect(() => {
         const tagsController = new AbortController()
 
@@ -103,6 +110,7 @@ function BlogEditor({ pTitle, type, allowDraft, blogId, blogData, submissionPath
         return () => tagsController.abort()
     }, [])
 
+    // Load categories from server
     useEffect(() => {
         const CategoriesController = new AbortController()
 
@@ -206,7 +214,7 @@ function BlogEditor({ pTitle, type, allowDraft, blogId, blogData, submissionPath
             try {
                 const parsedPayload = JSON.stringify(payload);
                 const request = await fetch(submissionPath, {
-                    method: 'POST',
+                    method: type === "update" ? "PUT" : "POST",
                     headers: {
                         'content-type': 'application/json'
                     },
@@ -218,12 +226,14 @@ function BlogEditor({ pTitle, type, allowDraft, blogId, blogData, submissionPath
                     toast.error(msg)
                 } else {
                     const cnf = response.data.message
-                    toast.success(cnf)
+                    toast.success(cnf, {autoClose: 2050})
                     setTitle('')
                     setCategory('')
                     setContent('')
                     setTags([])
                     localStorage.removeItem('draftBlog')
+                    await new Promise(resolve => setTimeout(resolve, 2000))
+                    navigate(redirect, {replace: true})
                 }
             } catch (error) {
                 console.warn(error.message)
