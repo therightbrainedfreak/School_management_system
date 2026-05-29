@@ -6,7 +6,7 @@ import SearchSuggestions from "./shards/SearchSuggestion";
 import { useState } from "react";
 import { useNavigate } from "react-router-dom";
 
-function BlogsNavbar() {
+function BlogsNavbar({fetchBlogs}) {
     const [ isSearchFocused, setSearchFocus ] = useState(false);
     const [ query, setQuery ] = useState('');
 
@@ -14,11 +14,13 @@ function BlogsNavbar() {
 
     function handelSearch(e) {
         e.preventDefault()
-        alert("Submit Prevented!")
+        
+        const controller = new AbortController()
+        fetchBlogs(controller, query)
     }
 
     return (
-        <div className="max-sm:mx-4 flex flex-col py-2 gap-2">
+        <div className=" flex flex-col gap-2">
             <div className="flex flex-row items-center justify-between">
                 <h1 className="text-xl font-bold">BLOGS</h1>
                 <div className="flex gap-2 items-center justify-center">
@@ -46,6 +48,8 @@ function BlogsNavbar() {
                         onBlur={()=>{setSearchFocus(false)}}
                         className="bg-gray-200 px-3 py-2 rounded-tl-md rounded-bl-md text-sm outline-0 w-full" name="search" type="text" placeholder="Search Articles"
                         onInput={(e)=>{setQuery(e.target.value)}}
+                        value={query}
+                        autoComplete="off"
                     />
                     <button className="bg-mauve-900 text-white rounded-tr-md rounded-br-md h-9 w-10 flex items-center justify-center" type="submit">
                         <CiSearch size={"18px"} />

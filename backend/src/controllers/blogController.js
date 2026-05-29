@@ -729,7 +729,10 @@ export const getMyBlogs = async (req, res) => {
     const userName = req.user?.name;
 
     try {
-        const userBlogs = await blog.find({'author.id': userId, isAvailable: true}).select('author metadata title status blogId createdAt updatedAt')
+        const userBlogs = await blog.find({'author.id': userId, isAvailable: true})
+        .select('author metadata title status blogId createdAt updatedAt')
+        .sort({createdAt: -1})
+
         if (userBlogs.length <= 0) {
             return res.status(404).json({
                 success: false,
@@ -846,10 +849,6 @@ export const getSpBlog = async (req, res) => {
             author: {
                 name: ublog.author.name,
                 role: ublog.author.role
-            },
-            reviewer: {
-                name: ublog.reviewer.name,
-                role: ublog.reviewer.role
             },
             metadata: {
                 category: ublog.metadata.category,
@@ -1264,5 +1263,178 @@ export const softDeleteBlog = async (req, res) => {
     } finally {
         // Final close the session
         await tSession.endSession();
+    }
+}
+
+export const blogsFeed = async (req, res) => {
+    const page = Math.max(1, parseInt(req.query.page) || 1 );
+    const limit = Math.min(20, Math.max(1, parseInt(req.query.limit) || 10));
+    const search = req.query.search || null
+
+    try {
+        const skip = (page - 1) * limit;
+
+        if (!search || search.trim() === "") {
+            const filter = { isAvailable: true, "status.state": "LIVE" };
+
+            const [blogs, total] = await Promise.all([
+                blog.find(filter)
+                    .sort({ createdAt: -1 })
+                    .select('author blogId metadata title content isAvailable status createdAt')
+                    .skip(skip)
+                    .limit(limit)
+                    .lean(),
+                blog.countDocuments(filter)
+            ]);
+
+            let uBlogs = [];
+
+            for (const cBlog of blogs) {
+                const payload = {
+                    author: {
+                        name: cBlog.author.name,
+                        role: cBlog.author.role
+                    },
+                    metadata: {
+                        category: cBlog.metadata.category,
+                        tags: cBlog.metadata.tags,
+                        likes: cBlog.metadata.likes.length
+                    },
+                    title: cBlog.title,
+                    blogId: cBlog.blogId,
+                    createdAt: formatDate(cBlog.createdAt)
+                }
+                uBlogs.push(payload);
+
+            }
+
+            return res.json({
+                success: true,
+                status: 200,
+                data: {
+                    blogs: uBlogs,
+                    pagination: {
+                        page,
+                        limit,
+                        totalPages: Math.ceil(total / limit),
+                        hasNextPage: page * limit < total,
+                    }
+                },
+                metadata: {
+                    server_time: Date.now(),
+                    version: process.env.API_VERSION || 'v0.0.0'
+                }
+            });
+
+        }
+
+        const keywords = search.trim().split(" ").filter(Boolean);
+
+        const results = await blog.aggregate([
+            {
+                $match: {
+                    isAvailable: true,
+                    "status.state": "LIVE",
+                    $or: keywords.map(k => ({
+                        title: { $regex: k, $options: "i" }
+                    }))
+                }
+            },
+            {
+                $addFields: {
+                    score: {
+                        $add: keywords.map(k => ({
+                            $cond: [
+                                {$regexMatch: { input: "$title", regex: k, options: "i" } },
+                                10, 0
+                            ]
+                        }))
+                    }
+                }
+            },
+
+            { $match: { score: { $gt: 0 } } },
+            { $sort: { score: -1 } },
+
+            {
+                $facet: {
+                    blogs: [
+                        { $skip: skip },
+                        { $limit: limit },
+                        { $project: { author: 1, blogId: 1, metadata: 1, title: 1, content: 1, isAvailable: 1, status: 1, createdAt: 1 } }
+                    ],
+                    totalCount: [
+                        { $count: "total" }
+                    ]
+                }
+            }
+        ])
+
+        const blogs = results[0].blogs;
+        const total = results[0].totalCount[0]?.total || 0;
+
+        let uBlogs = [];
+
+        for (const cBlog of blogs) {
+            const payload = {
+                author: {
+                    name: cBlog.author.name,
+                    role: cBlog.author.role
+                },
+                metadata: {
+                    category: cBlog.metadata.category,
+                    tags: cBlog.metadata.tags,
+                    likes: cBlog.metadata.likes.length
+                },
+                title: cBlog.title,
+                blogId: cBlog.blogId,
+                createdAt: formatDate(cBlog.createdAt)
+            }
+            uBlogs.push(payload);
+
+        }
+
+        return res.json({
+            success: true,
+            status: 200,
+            data: {
+                blogs: uBlogs,
+                pagination: {
+                    page,
+                    limit,
+                    totalPages: Math.ceil(total / limit),
+                    hasNextPage: page * limit < total,
+                }
+            },
+            metadata: {
+                server_time: Date.now(),
+                version: process.env.API_VERSION || 'v0.0.0'
+            }
+        });
+
+    } catch (error) {
+
+        logger({
+            level: 'error',
+            origin: 'mainService',
+            originName: 'blogsFeed',
+            message: 'Error finding blogs',
+            metadata: {},
+            stackTrace: error
+        });
+
+        // Respond with error
+        res.status(500).json({
+            success: false,
+            status: 500,
+            error: {
+                code: "INTERNAL_ERROR",
+                message: "Unexpected error occured while finding recomended blogs."
+            },
+            metadata: {
+                server_time: Date.now(),
+                version: process.env.API_VERSION || 'v0.0.0'
+            }
+        });
     }
 }

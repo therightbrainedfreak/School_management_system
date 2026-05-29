@@ -2,8 +2,7 @@ import { MdOutlineAccountCircle } from "react-icons/md";
 
 function MBlog({cAt, uAt, author, metadata, status, title, blogId, setSearchParams}) {
     return (
-        
-        <div onClick={() => setSearchParams({ view: blogId })} className="relative bg-gray-100 rounded-lg p-2 cursor-pointer hover:bg-gray-200 transition-colors">
+        <div onClick={() => setSearchParams({ view: blogId })} className="relative bg-gray-100 rounded-lg p-2 cursor-pointer hover:bg-gray-200 transition-colors shadow-sm shadow-gray-300">
             
             <div className="flex flex-row items-start justify-between gap-2">
                 <div className="text-lg wrap-break-word font-bold leading-5">{title}</div>

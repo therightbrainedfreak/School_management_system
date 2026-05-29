@@ -163,7 +163,7 @@ function MBlogView({blogId, setSearchParams}) {
                 <div>
                     <h1>Delete this Blog</h1>
                     <p className="text-sm text-green-700">Deleting this blog doesn't permanently removes this from the system. Just makes it hidden to the all the ERP users.</p>
-                    <p className="text-sm text-red-700">Action is not reversible
+                    <p className="text-sm text-red-700">Action is not reversible</p>
                         <div>
                             {!deleteConfirmation
                                 ? <p onClick={()=>{setDeleteConfirmation(!deleteConfirmation)}} className="underline select-none cursor-pointer">delete now</p>
@@ -173,7 +173,6 @@ function MBlogView({blogId, setSearchParams}) {
                                 </div>
                             }
                         </div>
-                    </p>
                 </div>
             </div>
             

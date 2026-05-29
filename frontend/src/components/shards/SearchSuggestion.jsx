@@ -63,7 +63,7 @@ function SearchSuggestions(props) {
                 animate={{ y: 0, opacity: 1 }}
                 transition={{ duration: 0.3 }}
                 exit={{ y: 20, opacity: 0 }}
-                className="suggestions absolute top-full bg-gray-200 mt-2 rounded-tr-md rounded-br-md rounded-bl-md p-2 h-fit min-w-40 flex flex-col items-start justify-start gap-2 text-sm max-h-60 overflow-y-auto">
+                className="suggestions absolute top-full bg-gray-200 mt-2 rounded-tr-md rounded-br-md rounded-bl-md p-2 h-fit min-w-40 flex flex-col items-start justify-start gap-2 text-sm max-h-60 overflow-y-auto z-20">
 
                 <span
                     className="heading w-full h-fit" >
@@ -79,6 +79,7 @@ function SearchSuggestions(props) {
                             : null
                         : results.map(item => {
                             return <div
+                                onClick={() => { props.setQuery(item) }}
                                 className="cursor-pointer hover:bg-gray-900 hover:text-white bg-gray-300 px-1.5 py-1 rounded-sm leading-none" key={item.slice(0, 10)}>
                                 {item}
                             </div>

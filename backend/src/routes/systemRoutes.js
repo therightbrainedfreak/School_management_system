@@ -19,7 +19,8 @@ import {
     tags,
     getSpBlog,
     updateBlog,
-    softDeleteBlog
+    softDeleteBlog,
+    blogsFeed
 } from "../controllers/blogController.js";
 
 const route = Router();
@@ -37,6 +38,8 @@ route.get('/student_applications', authenticate, authorise('admin', 'superuser')
 route.get('/student_applications/:appRef', authenticate, authorise("admin", "superuser"), getStudentApplication); // Get a specific student application.
 
 // ****************** BLOG ROUTES ****************** //
+
+route.get('/blogs-latest', blogsFeed);
 
 route.post('/blogs', authenticate, authorise('admin', 'superuser', 'student', 'parent', 'teacher'), composeBlog); // Create new blog.
 route.put('/blogs/:blogId', authenticate, authorise('admin', 'superuser', 'student', 'parent', 'teacher'), updateBlog); // Update a blog.

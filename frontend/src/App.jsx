@@ -8,7 +8,6 @@ import CodeOfConduct from './pages/CodeOfConduct'
 import HelpCenter from './pages/HelpCenter'
 import LearnMore from './pages/LearnMore'
 import Blogs from './pages/Blogs'
-import BlogsNavbar from './components/BlogsNavbar'
 import ProtectedRoute from './components/ProtectedRoute'
 import Dashboard from './pages/Dashboard'
 import { AnimatePresence } from 'framer-motion'
@@ -17,6 +16,7 @@ import ComposeBlog from './pages/ComposeBlog'
 import MyBlogs from './pages/MyBlogs'
 import UpdateBlog from './pages/UpdateBlog'
 import AuthWrapper from './pages/AuthWrapper'
+import MainBlogViewer from './components/MainBlogViewer'
 
 function App() {
   const location = useLocation();
@@ -29,6 +29,14 @@ function App() {
           <PageTransition>
             <Navbar />
             <Landing />
+            <Footer />
+          </PageTransition>
+        } />
+
+        <Route path='/blogs/view' element={
+          <PageTransition>
+            <Navbar />
+            <MainBlogViewer />
             <Footer />
           </PageTransition>
         } />
@@ -72,7 +80,6 @@ function App() {
         <Route path="/blogs" element={
           <PageTransition>
             <Navbar />
-            <BlogsNavbar />
             <Blogs />
             <Footer />
           </PageTransition>
