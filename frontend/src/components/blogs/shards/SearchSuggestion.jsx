@@ -1,7 +1,7 @@
 import { AnimatePresence, motion } from "framer-motion";
 import { ThreeDots } from "react-loader-spinner";
 import { useState, useEffect } from "react";
-import { useDebounce } from "../../hooks/useDebounce";
+import { useDebounce } from "../../../hooks/useDebounce";
 
 function SearchSuggestions(props) {
     const [results, setResults] = useState([]);
@@ -63,14 +63,10 @@ function SearchSuggestions(props) {
                 animate={{ y: 0, opacity: 1 }}
                 transition={{ duration: 0.3 }}
                 exit={{ y: 20, opacity: 0 }}
-                className="suggestions absolute top-full bg-gray-200 mt-2 rounded-tr-md rounded-br-md rounded-bl-md p-2 h-fit min-w-40 flex flex-col items-start justify-start gap-2 text-sm max-h-60 overflow-y-auto z-20">
+                className="suggestions py-3 border border-white absolute top-full bg-gray-100/5 mt-2 rounded-lg backdrop-blur-md h-fit min-w-40 flex flex-col items-start justify-start gap-2 text-sm max-h-60 overflow-y-auto z-20 shadow-inner shadow-white">
 
-                <span
-                    className="heading w-full h-fit" >
+                <span className="flex flex-col px-2" >
                     {props.query ? props.query.length < 3 ? `Type ${3 - props.query.length} more character to search` : "" : "Type atleast 3 characters to start search"}
-                </span>
-
-                <span className="flex flex-col gap-2" >
                     {results.length == 0
                         ? props.query.length >= 3
                             ? loading
@@ -79,8 +75,11 @@ function SearchSuggestions(props) {
                             : null
                         : results.map(item => {
                             return <div
-                                onClick={() => { props.setQuery(item) }}
-                                className="cursor-pointer hover:bg-gray-900 hover:text-white bg-gray-300 px-1.5 py-1 rounded-sm leading-none" key={item.slice(0, 10)}>
+                                onMouseDown={(e) => {
+                                    e.preventDefault();
+                                    props.setQuery(item)
+                                }}
+                                className="cursor-pointer px-1.5 py-1 rounded-sm leading-none hover:bg-gray-50" key={item.slice(0, 10)}>
                                 {item}
                             </div>
                         })
@@ -91,4 +90,4 @@ function SearchSuggestions(props) {
     )
 }
 
-export default SearchSuggestions;
+export default SearchSuggestions

@@ -1,5 +1,5 @@
 import { useState, useEffect } from "react";
-import BlogEditor from "../components/BlogEditor"
+import BlogEditor from "../../components/blogs/BlogEditor"
 import { useParams } from "react-router-dom"
 import { ThreeDots } from "react-loader-spinner";
 

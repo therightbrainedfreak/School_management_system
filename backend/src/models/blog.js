@@ -18,11 +18,8 @@ const blogSchema = new mongoose.Schema({
     metadata: {
         category: {type: String, required: true},
         tags: {type: [String], required: true},
-        likes: [{
-            id: { type: String },
-            role: { type: String },
-            name: { type: String }
-        }]
+        likes: { type: [String], default: [] },
+        reads: { type: [String], default: [] }
     },
     title: { type: String, required: true },
     content: { type: String, required: true },

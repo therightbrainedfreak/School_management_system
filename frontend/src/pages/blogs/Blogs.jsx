@@ -1,8 +1,8 @@
 import { ThreeDots } from "react-loader-spinner"
 import { useEffect, useState } from "react"
-import PaginationNav from "../components/shards/PaginationNav"
-import FeedBlog from "../components/FeedBlog"
-import BlogsNavbar from "../components/BlogsNavbar"
+import PaginationNav from "../../components/blogs/shards/PaginationNav"
+import FeedBlog from "../../components/FeedBlog"
+import BlogsNavbar from "../../components/blogs/BlogsNavbar"
 
 function Loader() {
     return (

@@ -1,4 +1,4 @@
-import BlogEditor from "../components/BlogEditor"
+import BlogEditor from "../../components/blogs/BlogEditor"
 
 function ComposeBlog() {
     return (

@@ -1,4 +1,3 @@
-import 'dotenv/config'
 import jwt from 'jsonwebtoken';
 
 export const authenticate = (req, res, next) => {
@@ -39,4 +38,20 @@ export const authenticate = (req, res, next) => {
             }
         })
     }
+};
+
+export const softAuthenticate = (req, res, next) => {
+    // Verify and decode the token
+    try {
+        // Extract token cookie from the client
+        const token = req.cookies?.token;
+        if (token) {
+            const decoded = jwt.verify(token, process.env.JWT_SECRET);
+            // Join the decoded payload to the user object for call back function.
+            req.user = decoded;
+        }
+    } catch (error) {
+        // invalid or expired token, continue as guest
+    }
+    next();
 };

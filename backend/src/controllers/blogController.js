@@ -494,10 +494,10 @@ const blogSearchSuggestions = [
   "tips for choosing high school electives"
 ];
 
-const formatDate = (date) => format(new Date(date), 'dd/MM/yyyy | HH:mm');
+const formatDate = (date) => format(new Date(date), 'dd/MM/yyyy HH:mm');
 
 const sanitizeText = (val, max) => 
-    typeof val === 'string' ? val.trim().replace(/\s+/g, ' ').replace(/[^\x20-\x7E]/g, '').slice(0, max) : undefined;
+    typeof val === 'string' ? val.trim().replace(/\s+/g, ' ').slice(0, max) : undefined;
 
 export const composeBlog = async (req, res) => {
     // Safe extract Author data
@@ -829,7 +829,7 @@ export const getSpBlog = async (req, res) => {
     }
 
     try {
-        const ublog = await blog.findOne({ blogId: blogId, isAvailable: true }) 
+        const ublog = await blog.findOne({ blogId: blogId, isAvailable: true, 'author.id': userId }) 
         if (!ublog) {
             return res.status(404).json({
                 success: false,
@@ -1298,7 +1298,8 @@ export const blogsFeed = async (req, res) => {
                     metadata: {
                         category: cBlog.metadata.category,
                         tags: cBlog.metadata.tags,
-                        likes: cBlog.metadata.likes.length
+                        likes: cBlog.metadata.likes.length,
+                        reads: cBlog.metadata.reads.length
                     },
                     title: cBlog.title,
                     blogId: cBlog.blogId,
@@ -1384,7 +1385,8 @@ export const blogsFeed = async (req, res) => {
                 metadata: {
                     category: cBlog.metadata.category,
                     tags: cBlog.metadata.tags,
-                    likes: cBlog.metadata.likes.length
+                    likes: cBlog.metadata.likes.length,
+                    reads: cBlog.metadata.reads.length
                 },
                 title: cBlog.title,
                 blogId: cBlog.blogId,
@@ -1437,4 +1439,908 @@ export const blogsFeed = async (req, res) => {
             }
         });
     }
+}
+
+export const getFeedBlog = async (req, res) => {
+    const userId = req.user?.id ?? null;
+    const blogId = req.params.blogId;
+
+    if (!blogId) {
+        res.status(400).json({
+            success: false,
+            status: 400,
+            error: {
+                code: "INCOMPLETE_DATA",
+                message: "Blog id not provided."
+            },
+            metadata: {
+                server_time: Date.now(),
+                version: process.env.API_VERSION || 'v0.0.0'
+            }
+        });
+    }
+
+    try {
+        const ublog = await blog.findOne({ blogId: blogId, isAvailable: true }) 
+        if (!ublog) {
+            return res.status(404).json({
+                success: false,
+                status: 404,
+                error: {
+                    code: "NOT_FOUND",
+                    message: "No blog found or Invalid blog id",
+                },
+                metadata: {
+                    server_time: Date.now(),
+                    version: process.env.API_VERSION || 'v0.0.0'
+                }
+            });
+        }
+
+        const payload = {
+            author: {
+                name: ublog.author.name,
+                role: ublog.author.role
+            },
+            metadata: {
+                category: ublog.metadata.category,
+                tags: ublog.metadata.tags,
+                likes: ublog.metadata.likes.length,
+                isLiked: userId ? ublog.metadata.likes.includes(userId) : false,
+                reads: ublog.metadata.reads.length,
+                isRead: userId ? ublog.metadata.reads.includes(userId) : false
+            },
+            title: ublog.title,
+            content: ublog.content,
+            createdAt: formatDate(ublog.createdAt),
+            updatedAt: formatDate(ublog.updatedAt)
+        }
+
+        res.json({
+            success: true,
+            status: 200,
+            data: {
+                blog: payload
+            },
+            metadata: {
+                server_time: Date.now(),
+                version: process.env.API_VERSION || 'v0.0.0'
+            }
+        });
+
+    } catch (error) {
+        logger({
+            level: 'error',
+            origin: 'mainService',
+            originName: 'getFeedBlog',
+            message: 'Error finding blog',
+            metadata: {
+                orderId: blogId
+            },
+            stackTrace: error
+        });
+        res.status(500).json({
+            success: false,
+            status: 500,
+            error: {
+                code: "INTERNAL_ERROR",
+                message: "Unexpected error occured while finding blog."
+            },
+            metadata: {
+                server_time: Date.now(),
+                version: process.env.API_VERSION || 'v0.0.0'
+            }
+        });
+    }
+}
+
+export const recordBlogLike = async (req, res) => {
+
+    const userId = req.user?.id;
+    const blogId = req.params.blogId;
+
+    if (!blogId) {
+        return res.status(400).json({
+            success: false,
+            status: 400,
+            error: {
+                code: "INCOMPLETE_DATA",
+                message: "BlogId not provided."
+            },
+            metadata: {
+                server_time: Date.now(),
+                version: process.env.API_VERSION || 'v0.0.0'
+            }
+        });
+    }
+
+    const tSession = await mongoose.startSession();
+
+    try {
+
+        tSession.startTransaction();
+
+        const rBlog = await blog.findOne({ blogId: blogId, isAvailable: true }, null, { session: tSession });
+        if (!rBlog) {
+            await tSession.abortTransaction();
+            return res.status(404).json({
+                success: false,
+                status: 404,
+                error: {
+                    code: "NOT_FOUND",
+                    message: "requested content not found."
+                },
+                metadata: {
+                    server_time: Date.now(),
+                    version: process.env.API_VERSION || 'v0.0.0'
+                }
+            });
+        }
+
+        const ownerId = rBlog.author.id;
+        if (userId !== ownerId) {
+            await tSession.abortTransaction();
+            return res.status(402).json({
+                success: false,
+                status: 402,
+                error: {
+                    code: "NOT_ALLOWED",
+                    message: "action not allowed."
+                },
+                metadata: {
+                    server_time: Date.now(),
+                    version: process.env.API_VERSION || 'v0.0.0'
+                }
+            });
+        }
+
+        const isLiked = rBlog.metadata.likes.includes(userId);
+        const updatedBlog = await blog.findOneAndUpdate(
+            { blogId },
+            isLiked
+                ? { $pull: { 'metadata.likes': userId } }
+                : { $push: { 'metadata.likes': userId } },
+            { returnDocument: 'after', projection: { 'metadata.likes': 1 } },
+            { session: tSession }
+        );
+
+        await tSession.commitTransaction();
+
+        return res.json({
+            success: true,
+            status: 200,
+            data: {
+                liked: !isLiked,
+                likesCount: updatedBlog.metadata.likes.length
+            },
+            metadata: {
+                server_time: Date.now(),
+                version: process.env.API_VERSION || 'v0.0.0'
+            }
+        })
+
+    } catch (error) {
+        // Abort db transaction on failure
+        await tSession.abortTransaction();
+
+        // Get the enviroment type fromt enviroment variables
+        const NODE_ENV = process.env.NODE_ENV || 'development';
+
+        // Log to terminal for debugging if service is not in production
+        if (NODE_ENV !== 'production') {
+            pino_logger.debug(error, 'Error occured while processing blog like');
+        }
+
+        // Log to main logbook
+        logger({
+            level: 'error',
+            origin: 'mainService',
+            originName: 'recordBlogLike',
+            message: 'Error occured while sending processing blog likes',
+            metadata: {
+                orderId: blogId
+            },
+            stackTrace: error
+        });
+
+        // Respond with server error
+        return res.status(500).json({
+            success: false,
+            status: 500,
+            error: {
+                code: "INTERNAL_ERROR",
+                message: "Unexpected error occured while processing blog likes."
+            },
+            metadata: {
+                server_time: Date.now(),
+                version: process.env.API_VERSION || 'v0.0.0'
+            }
+        });
+    } finally {
+        await tSession.endSession();
+    }
+
+}
+
+export const registerRead = async (req, res) => {
+    const userId = req.user?.id ?? null;
+    const blogId = req.params.blogId;
+
+    if (!blogId) {
+        res.status(400).json({
+            success: false,
+            status: 400,
+            error: {
+                code: "INCOMPLETE_DATA",
+                message: "Blog id not provided."
+            },
+            metadata: {
+                server_time: Date.now(),
+                version: process.env.API_VERSION || 'v0.0.0'
+            }
+        });
+    }
+
+    // create mongoose session
+    const tSession = await mongoose.startSession();
+    try {
+        // Start the tranaction
+        tSession.startTransaction();
+
+        // Find the blog from the database
+        const update = await blog.updateOne(
+            {blogId: blogId},
+            { $push: { 'metadata.reads': userId ? userId : "GUEST" } },
+            {session: tSession}
+        )
+
+        if (!update.acknowledged) {
+            throw new Error('Not updated')
+        }
+
+        await tSession.commitTransaction()
+
+        res.json({
+            success: true,
+            status: 200,
+            data: {
+                message: "Read Recorded!"
+            },
+            metadata: {
+                server_time: Date.now(),
+                version: process.env.API_VERSION || 'v0.0.0'
+            }
+        });
+
+    } catch (error) {
+        logger({
+            level: 'error',
+            origin: 'mainService',
+            originName: 'registerRead',
+            message: 'Error registering blog read',
+            metadata: {
+                orderId: blogId
+            },
+            stackTrace: error
+        });
+        res.status(500).json({
+            success: false,
+            status: 500,
+            error: {
+                code: "INTERNAL_ERROR",
+                message: "Unexpected error occured while registering blog read."
+            },
+            metadata: {
+                server_time: Date.now(),
+                version: process.env.API_VERSION || 'v0.0.0'
+            }
+        });
+    } finally {
+        await tSession.endSession()
+    }
+}
+
+export const toggleLike = async (req, res) => {
+    // Load initial data
+    const userId = req.user?.id;
+    const commentId = req.params.commentId;
+
+    // Precheck blogId
+    if (!commentId) {
+        return res.status(400).json({
+            success: false,
+            status: 400,
+            error: {
+                code: "INCOMPLETE_DATA",
+                message: "BlogId not provided."
+            },
+            metadata: {
+                server_time: Date.now(),
+                version: process.env.API_VERSION || 'v0.0.0'
+            }
+        });
+    }
+
+    // Create a mongoose session
+    const tSession = await mongoose.startSession();
+
+    try {
+        // Start mongoose transaction
+        tSession.startTransaction();
+
+        // Find the corresponding comment
+        const comment = await blogComment.findOne({commentId: commentId}, null, { session: tSession });
+
+        // Check if the comment exists
+        if (!comment) {
+            // Abort further transaction
+            await tSession.abortTransaction();
+            return res.status(404).json({
+                success: false,
+                status: 404,
+                error: {
+                    code: "NOT_FOUND",
+                    message: "requested content not found."
+                },
+                metadata: {
+                    server_time: Date.now(),
+                    version: process.env.API_VERSION || 'v0.0.0'
+                }
+            });
+        }
+
+        // Check if the owner requested the content
+        const ownerId = comment.author.id;
+        if (userId !== ownerId) {
+            // Abort further transaction
+            await tSession.abortTransaction();
+            return res.status(402).json({
+                success: false,
+                status: 402,
+                error: {
+                    code: "NOT_ALLOWED",
+                    message: "action not allowed."
+                },
+                metadata: {
+                    server_time: Date.now(),
+                    version: process.env.API_VERSION || 'v0.0.0'
+                }
+            });
+        }
+
+        // Store if the user is already liked or not
+        const isLiked = comment.metadata.likes.includes(userId);
+
+        // Update the comment
+        const updatedComment = await blogComment.findOneAndUpdate(
+            { commentId },
+            isLiked
+                ? { $pull: { 'metadata.likes': userId } }
+                : { $push: { 'metadata.likes': userId } },
+            { returnDocument: 'after', projection: { 'metadata.likes': 1 } },
+            { session: tSession }
+        );
+
+        // Commit transactions
+        await tSession.commitTransaction();
+
+        return res.json({
+            success: true,
+            status: 200,
+            data: {
+                liked: !isLiked,
+                likesCount: updatedComment.metadata.likes.length
+            },
+            metadata: {
+                server_time: Date.now(),
+                version: process.env.API_VERSION || 'v0.0.0'
+            }
+        })
+
+    } catch (error) {
+
+        // Abort db transaction on failure
+        await tSession.abortTransaction();
+
+        // Get the enviroment type fromt enviroment variables
+        const NODE_ENV = process.env.NODE_ENV || 'development';
+
+        // Log to terminal for debugging if service is not in production
+        if (NODE_ENV !== 'production') {
+            pino_logger.debug(error, 'Error occured while processing likes');
+        }
+
+        // Log to main logbook
+        logger({
+            level: 'error',
+            origin: 'mainService',
+            originName: 'toggleLIke',
+            message: 'Error occured while sending processing likes',
+            metadata: {
+                orderId: commentId
+            },
+            stackTrace: error
+        });
+
+        // Respond with server error
+        return res.status(500).json({
+            success: false,
+            status: 500,
+            error: {
+                code: "INTERNAL_ERROR",
+                message: "Unexpected error occured while processing likes."
+            },
+            metadata: {
+                server_time: Date.now(),
+                version: process.env.API_VERSION || 'v0.0.0'
+            }
+        });
+
+    } finally {
+        await tSession.endSession();
+    }
+
+}
+
+export const newComment = async (req, res) => {
+    const authorId = req.user?.id;
+    const authorRole = req.user?.role;
+    const autherName = req.user?.name;
+    const blogId = req.params.blogId;
+
+    // Get new comment data from the request body,
+    const { isReply, parentCommentId, content } = req.body || {};
+
+    if (!blogId || !content) {
+        return res.status(400).json({
+            success: false,
+            status: 400,
+            error: {
+                code: "INCOMPLETE_DATA",
+                message: "BlogId or content not provided."
+            },
+            metadata: {
+                server_time: Date.now(),
+                version: process.env.API_VERSION || 'v0.0.0'
+            }
+        });
+    }
+    
+    if (isReply && !parentCommentId) {
+        return res.status(400).json({
+            success: false,
+            status: 400,
+            error: {
+                code: "INVALID_DATA",
+                message: "Parent comment id is required to create a reply."
+            },
+            metadata: {
+                server_time: Date.now(),
+                version: process.env.API_VERSION || 'v0.0.0'
+            }
+        });
+    }
+
+    const tSession = await mongoose.startSession();
+    try {
+        tSession.startTransaction();
+
+        const uBlog = await blog.findOne({ blogId: blogId, isAvailable: true }, null, {session: tSession});
+
+        if (!uBlog) {
+            return res.status(404).json({
+                success: false,
+                status: 404,
+                error: {
+                    code: "NOT_FOUND",
+                    message: "Ghost data requested"
+                },
+                metadata: {
+                    server_time: Date.now(),
+                    version: process.env.API_VERSION || 'v0.0.0'
+                }
+            });
+        }
+
+        const payload = {
+            blogId: blogId,
+            parentCommentId: isReply === true ? parentCommentId.toString() : null,
+            author: {
+                id: authorId,
+                role: authorRole,
+                name: autherName
+            },
+            content: sanitizeText(content.toString(), 2000)
+        }
+        const newCommentInstance = new blogComment(payload);
+        await newCommentInstance.save(
+            {session: tSession}
+        );
+        await tSession.commitTransaction();
+
+        res.json({
+            success: true,
+            status: 200,
+            data: {
+                message: "Comment added"
+            },
+            metadata: {
+                server_time: Date.now(),
+                version: process.env.API_VERSION || 'v0.0.0'
+            }
+        })
+
+    } catch (error) {
+        await tSession.abortTransaction()
+        if (error.name === "ValidationError") {
+            let errors = {};
+            Object.keys(error.errors).forEach((key) => {
+                errors[key] = error.errors[key].message;
+            });
+            return res.status(422).json({
+                success: false,
+                status: 422,
+                error: {
+                    code: "VALIDATION_ERROR",
+                    message: "Incomplete data provided.",
+                    eFields: errors
+                },
+                metadata: {
+                    server_time: Date.now(),
+                    version: process.env.API_VERSION || 'v0.0.0'
+                }
+            });
+        };
+        logger({
+            level: 'error',
+            origin: 'mainService',
+            originName: 'newComment',
+            message: 'Error creating new comment',
+            metadata: {
+                orderId: blogId
+            },
+            stackTrace: error
+        });
+        return res.status(500).json({
+            success: false,
+            status: 500,
+            error: {
+                code: "INTERNAL_ERROR",
+                message: "Unexpected error occured while creating comments."
+            },
+            metadata: {
+                server_time: Date.now(),
+                version: process.env.API_VERSION || 'v0.0.0'
+            }
+        });
+    } finally {
+        await tSession.endSession();
+    }
+}
+
+// comments controller new version with replies aggregation
+export const getComments = async (req, res) => {
+    // Initial data load
+    const page = Math.max(1, parseInt(req.query.page) || 1 );
+    const limit = Math.min(20, Math.max(1, parseInt(req.query.limit) || 10));
+    const blogId = req.params.blogId;
+    const userId = req.user?.id ?? null;
+
+    // Precheck blog id
+    if (!blogId) {
+        res.status(400).json({
+            success: false,
+            status: 400,
+            error: {
+                code: "INCOMPLETE_DATA",
+                message: "Blog id not provided."
+            },
+            metadata: {
+                server_time: Date.now(),
+                version: process.env.API_VERSION || 'v0.0.0'
+            }
+        });
+    }
+
+    // Create a Mongoose transaction session
+    const tSession = await mongoose.startSession();
+
+    // Perform all critical tasks in try catch isolation
+    try {
+
+        // Start the db transaction
+        tSession.startTransaction();
+
+        const total = await blogComment.countDocuments({ blogId: blogId, parentCommentId: null }, null, { session: tSession });
+
+        const results = await blogComment.aggregate([
+            // Get all the comments for a specific blog
+            { $match: { blogId: blogId, parentCommentId: null } },
+
+            // Sort to newest first
+            { $sort: { createdAt: -1 } },
+
+            // Pagination
+            { $skip: (page - 1) * limit },
+            { $limit: limit },
+
+            // Join replies
+            { 
+                $lookup: {
+                    from: 'blogcomments',
+                    localField: 'commentId',
+                    foreignField: 'parentCommentId',
+                    as: 'replies'
+                }
+            },
+
+            // Add field for replies and likes count
+            {
+                $addFields: {
+                    repliesCount: { $size: '$replies' },
+                    likesCount: { $size: '$metadata.likes' },
+                    isLiked: { $in: [userId, '$metadata.likes'] }
+                }
+            },
+
+            // remove replies array leaving only count
+            { $unset: 'replies' },
+
+            // Return required fields
+            { 
+                $project: {
+                    commentId: 1,
+                    blogId: 1,
+                    content: 1,
+                    author: 1,
+                    isAvailable: 1,
+                    repliesCount: 1,
+                    likesCount: 1,
+                    isLiked: 1,
+                    createdAt: 1
+                }
+            }
+        ], {
+            session: tSession
+        })
+
+        // Post process comments
+        const processedComments = results.map((
+            { _id, blogId, author: { id, ...restAuthor }, content, isAvailable, createdAt, ...rest}
+        ) => ({
+            ...rest,
+            author: restAuthor,
+            content: isAvailable ? content : "[Comment removed]",
+            isAvailable: isAvailable,
+            createdAt: formatDate(createdAt),
+            isOwned: id === userId ? true : false
+        }))
+
+        await tSession.commitTransaction();
+
+        res.json({
+            success: true,
+            status: 200,
+            data: {
+                comments: processedComments,
+                pagination: {
+                    page,
+                    limit,
+                    totalPages: Math.ceil(total / limit),
+                    hasNextPage: page * limit < total,
+                    totalDocs: total
+                }
+            },
+            metadata: {
+                server_time: Date.now(),
+                version: process.env.API_VERSION || 'v0.0.0'
+            }
+        })
+        
+    } catch (error) {
+
+        // Abort db transaction on failure
+        await tSession.abortTransaction();
+
+        // Get the enviroment type fromt enviroment variables
+        const NODE_ENV = process.env.NODE_ENV || 'development';
+
+        // Log to terminal for debugging if service is not in production
+        if (NODE_ENV !== 'production') {
+            pino_logger.debug(error, 'Error occured while sending comments to the client');
+        }
+
+        // Log to main logbook
+        logger({
+            level: 'error',
+            origin: 'mainService',
+            originName: 'getComments',
+            message: 'Error occured while sending comments to the client',
+            metadata: {
+                orderId: blogId
+            },
+            stackTrace: error
+        });
+
+        // Respond with server error
+        return res.status(500).json({
+            success: false,
+            status: 500,
+            error: {
+                code: "INTERNAL_ERROR",
+                message: "Unexpected error occured while loading comments."
+            },
+            metadata: {
+                server_time: Date.now(),
+                version: process.env.API_VERSION || 'v0.0.0'
+            }
+        });
+
+    } finally {
+        // End the transaction session after processing request
+        await tSession.endSession();
+    }
+    // **********END OF THE CONTROLLER
+}
+
+// Replies controller
+export const getReplies = async (req, res) => {
+    // Initial data load
+    const page = Math.max(1, parseInt(req.query.page) || 1 );
+    const limit = Math.min(20, Math.max(1, parseInt(req.query.limit) || 10));
+    const commentId = req.params.commentId;
+    const userId = req.user?.id ?? null;
+
+    // Precheck blog id
+    if (!commentId) {
+        res.status(400).json({
+            success: false,
+            status: 400,
+            error: {
+                code: "INCOMPLETE_DATA",
+                message: "comment id not provided."
+            },
+            metadata: {
+                server_time: Date.now(),
+                version: process.env.API_VERSION || 'v0.0.0'
+            }
+        });
+    }
+
+    // Create a Mongoose transaction session
+    const tSession = await mongoose.startSession();
+
+    // Perform all critical tasks in try catch isolation
+    try {
+
+        // Start the db transaction
+        tSession.startTransaction();
+
+        const total = await blogComment.countDocuments({ parentCommentId: commentId }, null, { session: tSession });
+
+        const results = await blogComment.aggregate([
+            // Get all the comments for a specific blog
+            { $match: { parentCommentId: commentId } },
+
+            // Sort to newest first
+            { $sort: { createdAt: -1 } },
+
+            // Pagination
+            { $skip: (page - 1) * limit },
+            { $limit: limit },
+
+            // Join replies
+            { 
+                $lookup: {
+                    from: 'blogcomments',
+                    localField: 'commentId',
+                    foreignField: 'parentCommentId',
+                    as: 'replies'
+                }
+            },
+
+            // Add field for replies and likes count
+            {
+                $addFields: {
+                    repliesCount: { $size: '$replies' },
+                    likesCount: { $size: '$metadata.likes' },
+                    isLiked: { $in: [userId, '$metadata.likes'] }
+                }
+            },
+
+            // remove replies array leaving only count
+            { $unset: 'replies' },
+
+            // Return required fields
+            { 
+                $project: {
+                    commentId: 1,
+                    content: 1,
+                    author: 1,
+                    isAvailable: 1,
+                    repliesCount: 1,
+                    likesCount: 1,
+                    isLiked: 1,
+                    createdAt: 1
+                }
+            }
+        ], {
+            session: tSession
+        })
+
+        // Post process comments
+        const processedReplies = results.map((
+            { _id, author: { id, ...restAuthor }, content, isAvailable, createdAt, ...rest}
+        ) => ({
+            ...rest,
+            author: restAuthor,
+            content: isAvailable ? content : "[Reply removed]",
+            createdAt: formatDate(createdAt)
+        }))
+
+        await tSession.commitTransaction();
+
+        res.json({
+            success: true,
+            status: 200,
+            data: {
+                comments: processedReplies,
+                pagination: {
+                    page,
+                    limit,
+                    totalPages: Math.ceil(total / limit),
+                    hasNextPage: page * limit < total,
+                    totalDocs: total
+                }
+            },
+            metadata: {
+                server_time: Date.now(),
+                version: process.env.API_VERSION || 'v0.0.0'
+            }
+        })
+        
+    } catch (error) {
+
+        // Abort db transaction on failure
+        await tSession.abortTransaction();
+
+        // Get the enviroment type fromt enviroment variables
+        const NODE_ENV = process.env.NODE_ENV || 'development';
+
+        // Log to terminal for debugging if service is not in production
+        if (NODE_ENV !== 'production') {
+            pino_logger.debug(error, 'Error occured while sending replies to the client');
+        }
+
+        // Log to main logbook
+        logger({
+            level: 'error',
+            origin: 'mainService',
+            originName: 'getReplies',
+            message: 'Error occured while sending replies to the client',
+            metadata: {
+                orderId: commentId
+            },
+            stackTrace: error
+        });
+
+        // Respond with server error
+        return res.status(500).json({
+            success: false,
+            status: 500,
+            error: {
+                code: "INTERNAL_ERROR",
+                message: "Unexpected error occured while loading replies."
+            },
+            metadata: {
+                server_time: Date.now(),
+                version: process.env.API_VERSION || 'v0.0.0'
+            }
+        });
+
+    } finally {
+        // End the transaction session after processing request
+        await tSession.endSession();
+    }
+    // **********END OF THE CONTROLLER
 }

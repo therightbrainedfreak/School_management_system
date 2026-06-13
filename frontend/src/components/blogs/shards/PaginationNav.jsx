@@ -34,7 +34,7 @@ function PaginationNav({ pagination, isLoading, setPage }) {
                     : <button
                         key={pageNum}
                         onClick={() => setPage(pageNum)}
-                        className={`px-2 py-1 text-sm rounded-sm ${pageNum === pagination.page ? "bg-gray-800 text-white" : "bg-gray-200"} flex items-center justify-center hover:text-white hover:bg-gray-800 cursor-pointer transition-colors duration-200`}
+                        className={`px-2 py-1 min-w-7 text-sm rounded-sm ${pageNum === pagination.page ? "bg-gray-800 text-white" : "bg-gray-200"} flex items-center justify-center hover:text-white hover:bg-gray-800 cursor-pointer transition-colors duration-200`}
                     >
                         {pageNum}
                     </button>

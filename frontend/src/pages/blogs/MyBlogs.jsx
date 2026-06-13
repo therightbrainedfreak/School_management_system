@@ -1,10 +1,10 @@
-import MyBlogsNavbar from "../components/MyBlogsNavbar"
+import MyBlogsNavbar from "../../components/blogs/MyBlogsNavbar"
 import { ToastContainer, toast, Slide } from 'react-toastify';
 import { useEffect, useState } from "react"
 import { ThreeDots } from "react-loader-spinner";
-import MBlog from "../components/MBlog";
+import MBlog from "../../components/blogs/MBlog";
 import { useSearchParams } from "react-router-dom";
-import MBlogView from "../components/MBlogView";
+import MBlogView from "../../components/blogs/MBlogView";
 
 function MyBlogs() {
     const [isBlogsLoading, setBlogsLoading] = useState(true)

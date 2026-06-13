@@ -1,26 +1,28 @@
 import './App.css'
 import { Routes, Route, useLocation } from 'react-router-dom'
 import Landing from './pages/Landing'
-// import LoginPage from './pages/Login'
 import Navbar from './components/Navbar'
 import Footer from './components/Footer'
 import CodeOfConduct from './pages/CodeOfConduct'
 import HelpCenter from './pages/HelpCenter'
 import LearnMore from './pages/LearnMore'
-import Blogs from './pages/Blogs'
+import Blogs from './pages/blogs/Blogs'
 import ProtectedRoute from './components/ProtectedRoute'
 import Dashboard from './pages/Dashboard'
 import { AnimatePresence } from 'framer-motion'
 import PageTransition from './components/PageTransition'
-import ComposeBlog from './pages/ComposeBlog'
-import MyBlogs from './pages/MyBlogs'
-import UpdateBlog from './pages/UpdateBlog'
+import ComposeBlog from './pages/blogs/ComposeBlog'
+import MyBlogs from './pages/blogs/MyBlogs'
+import UpdateBlog from './pages/blogs/UpdateBlog'
 import AuthWrapper from './pages/AuthWrapper'
-import MainBlogViewer from './components/MainBlogViewer'
+import MainBlogViewer from './components/blogs/MainBlogViewer'
+
+// test imports
+import PayPage from './material/PayPage'
 
 function App() {
   const location = useLocation();
-  
+
   return (
     <AnimatePresence mode='wait'>
       <Routes location={location} key={location.pathname}>
@@ -40,12 +42,6 @@ function App() {
             <Footer />
           </PageTransition>
         } />
-
-        {/* <Route path="/login" element={
-          <PageTransition>
-            <LoginPage />
-          </PageTransition>
-        } /> */}
 
         <Route path="/auth" element={
           <PageTransition>
@@ -121,6 +117,10 @@ function App() {
               <Footer />
             </ProtectedRoute>
           </PageTransition>
+        } />
+
+        <Route path='/pg/pay' element={
+          <PayPage />
         } />
 
       </Routes>

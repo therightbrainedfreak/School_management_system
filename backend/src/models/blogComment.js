@@ -3,7 +3,7 @@ import { nanoid } from 'nanoid';
 
 const commentSchema = new mongoose.Schema({
     commentId: { type: String, required: true, index: true, unique: true },
-    blogId: { type: String, required: true },
+    blogId: { type: String, required: true, index: true },
     parentCommentId: { type: String, default: null },
     author: {
         id: { type: String, required: true },
@@ -11,7 +11,10 @@ const commentSchema = new mongoose.Schema({
         name: { type: String, required: true }
     },
     content: { type: String, required: true },
-    isAvailable: { type: Boolean, default: true }
+    isAvailable: { type: Boolean, default: true },
+    metadata: {
+        likes: { type: [String], default: [] }
+    }
 }, { timestamps: true })
 
 commentSchema.pre('validate', function() {

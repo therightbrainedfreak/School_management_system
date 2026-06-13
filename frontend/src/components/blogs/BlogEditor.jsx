@@ -2,8 +2,8 @@ import { useState, useEffect } from 'react'
 import { AnimatePresence, motion } from 'framer-motion'
 import { RiDraftFill } from "react-icons/ri";
 import { MdOutlinePublish } from "react-icons/md";
-import CategorySearchSuggestions from '../components/shards/CategorySuggestions';
-import TagSearchSuggestions from '../components/shards/TagSuggestions';
+import CategorySearchSuggestions from '../../components/blogs/shards/CategorySuggestions';
+import TagSearchSuggestions from '../../components/blogs/shards/TagSuggestions';
 import { IoCloseOutline } from "react-icons/io5";
 import { ToastContainer, toast, Slide } from 'react-toastify';
 import { ThreeDots } from "react-loader-spinner";

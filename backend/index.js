@@ -38,6 +38,7 @@ pino_logger.info('Starting up')
 
 const port = process.env.PORT || 3000;
 const app = express();
+let server;
 
 const allowedOrigins = [
   'http://localhost:5500',
@@ -102,7 +103,7 @@ async function bootstrap() {
     res.status(err.status || 500).json({ error: err.message || 'Internal Server Error' });
   });
 
-  app.listen(port, () => pino_logger.info({ port }, 'Server listening'));
+  server = app.listen(port, () => pino_logger.info({ port }, 'Server listening'));
 }
 
 bootstrap().catch(err => {

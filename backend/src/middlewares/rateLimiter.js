@@ -21,7 +21,7 @@ export const globalLimiter = rateLimit({
 
 export const loginLimiter = rateLimit({
     windowMs: 15 * 60 * 1000, // 15 minutes
-    max: 50, // Only 5 login attempts allowed!
+    max: 5, // Only 5 login attempts allowed!
     message: {
         success: false,
         status: 429,
