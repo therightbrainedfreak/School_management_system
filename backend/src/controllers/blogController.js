@@ -2,7 +2,8 @@ import 'dotenv/config'
 import blog from "../models/blog.js";
 import blogComment from "../models/blogComment.js";
 import { sanitizeHTML } from "../utils/utils.js";
-import mongoose from 'mongoose'
+import { errRes, sucRes } from "../utils/utils.js";
+import mongoose, { connect } from 'mongoose'
 import { logger } from '../utils/logger.js';
 import { format } from 'date-fns';
 import pino_logger from '../utils/pino.js';
@@ -1882,142 +1883,6 @@ export const toggleLike = async (req, res) => {
 
 }
 
-export const newComment = async (req, res) => {
-    const authorId = req.user?.id;
-    const authorRole = req.user?.role;
-    const autherName = req.user?.name;
-    const blogId = req.params.blogId;
-
-    // Get new comment data from the request body,
-    const { isReply, parentCommentId, content } = req.body || {};
-
-    if (!blogId || !content) {
-        return res.status(400).json({
-            success: false,
-            status: 400,
-            error: {
-                code: "INCOMPLETE_DATA",
-                message: "BlogId or content not provided."
-            },
-            metadata: {
-                server_time: Date.now(),
-                version: process.env.API_VERSION || 'v0.0.0'
-            }
-        });
-    }
-    
-    if (isReply && !parentCommentId) {
-        return res.status(400).json({
-            success: false,
-            status: 400,
-            error: {
-                code: "INVALID_DATA",
-                message: "Parent comment id is required to create a reply."
-            },
-            metadata: {
-                server_time: Date.now(),
-                version: process.env.API_VERSION || 'v0.0.0'
-            }
-        });
-    }
-
-    const tSession = await mongoose.startSession();
-    try {
-        tSession.startTransaction();
-
-        const uBlog = await blog.findOne({ blogId: blogId, isAvailable: true }, null, {session: tSession});
-
-        if (!uBlog) {
-            return res.status(404).json({
-                success: false,
-                status: 404,
-                error: {
-                    code: "NOT_FOUND",
-                    message: "Ghost data requested"
-                },
-                metadata: {
-                    server_time: Date.now(),
-                    version: process.env.API_VERSION || 'v0.0.0'
-                }
-            });
-        }
-
-        const payload = {
-            blogId: blogId,
-            parentCommentId: isReply === true ? parentCommentId.toString() : null,
-            author: {
-                id: authorId,
-                role: authorRole,
-                name: autherName
-            },
-            content: sanitizeText(content.toString(), 2000)
-        }
-        const newCommentInstance = new blogComment(payload);
-        await newCommentInstance.save(
-            {session: tSession}
-        );
-        await tSession.commitTransaction();
-
-        res.json({
-            success: true,
-            status: 200,
-            data: {
-                message: "Comment added"
-            },
-            metadata: {
-                server_time: Date.now(),
-                version: process.env.API_VERSION || 'v0.0.0'
-            }
-        })
-
-    } catch (error) {
-        await tSession.abortTransaction()
-        if (error.name === "ValidationError") {
-            let errors = {};
-            Object.keys(error.errors).forEach((key) => {
-                errors[key] = error.errors[key].message;
-            });
-            return res.status(422).json({
-                success: false,
-                status: 422,
-                error: {
-                    code: "VALIDATION_ERROR",
-                    message: "Incomplete data provided.",
-                    eFields: errors
-                },
-                metadata: {
-                    server_time: Date.now(),
-                    version: process.env.API_VERSION || 'v0.0.0'
-                }
-            });
-        };
-        logger({
-            level: 'error',
-            origin: 'mainService',
-            originName: 'newComment',
-            message: 'Error creating new comment',
-            metadata: {
-                orderId: blogId
-            },
-            stackTrace: error
-        });
-        return res.status(500).json({
-            success: false,
-            status: 500,
-            error: {
-                code: "INTERNAL_ERROR",
-                message: "Unexpected error occured while creating comments."
-            },
-            metadata: {
-                server_time: Date.now(),
-                version: process.env.API_VERSION || 'v0.0.0'
-            }
-        });
-    } finally {
-        await tSession.endSession();
-    }
-}
-
 // comments controller new version with replies aggregation
 export const getComments = async (req, res) => {
     // Initial data load
@@ -2051,11 +1916,18 @@ export const getComments = async (req, res) => {
         // Start the db transaction
         tSession.startTransaction();
 
-        const total = await blogComment.countDocuments({ blogId: blogId, parentCommentId: null }, null, { session: tSession });
+        // Search parameters for db
+        const searchParameters = {
+            blogId: blogId,
+            parentId: null,
+            rootId: null
+        }
+
+        const total = await blogComment.countDocuments(searchParameters, null, { session: tSession });
 
         const results = await blogComment.aggregate([
             // Get all the comments for a specific blog
-            { $match: { blogId: blogId, parentCommentId: null } },
+            { $match: searchParameters },
 
             // Sort to newest first
             { $sort: { createdAt: -1 } },
@@ -2343,4 +2215,114 @@ export const getReplies = async (req, res) => {
         await tSession.endSession();
     }
     // **********END OF THE CONTROLLER
+}
+
+export const newCommentHandler = async (req, res) => {
+    // Extract user data from authoriser.
+    const authorId = req.user?.id;
+    const authorRole = req.user?.role;
+    const authorName = req.user?.name;
+
+    // Extract path params, query params and body.
+    const blogId = req.params.blogId;
+    const parentId = req.body.parentId || null;
+    const content = req.body.content || null;
+
+    let rootId = null;
+    const replyTo = { id: null, name: null };
+
+    // Check if the necessary fields are present
+    if ( !blogId || !content) return errRes(res, 400, "INCOMPLETE_DATA", "Missing necessary data");
+
+    // Create a mongoose session for safe query executions.
+    const tSession = await mongoose.startSession();
+
+    try {
+        // start the transaction session.
+        tSession.startTransaction();
+
+        // Find the corresponding blog.
+        const cBlog = await blog.findOne({ blogId: blogId, isAvailable: true }, null, { session: tSession });
+        if (!cBlog) {
+            await tSession.abortTransaction();
+            return errRes(res, 404, "NOT_FOUND", "Cannot find dependent data");
+        }
+
+        // Then check if the request is for a reply or a root comment.
+        if (parentId) {
+            const comment = await blogComment.findOne({ commentId: parentId, isAvailable: true }, null, { session: tSession });
+            if (!comment) {
+                await tSession.abortTransaction();
+                return errRes(res, 404, "NOT_FOUND", "Cannot find dependent data");
+            }
+            rootId = comment.rootId ?? comment.commentId;
+            replyTo.id = comment.author.id;
+            replyTo.name = comment.author.name;
+        }
+
+        // Define insertion payload.
+        const payload = {
+            blogId: blogId,
+            parentId: parentId,
+            rootId: rootId,
+            replyTo: replyTo,
+            author: {
+                id: authorId,
+                name: authorName,
+                role: authorRole
+            },
+            content: sanitizeText(content, 2000)
+        }
+
+        // Insert to db.
+        const newComment = new blogComment(payload);
+        await newComment.save({ session: tSession });
+
+        // Commit all db transaction.
+        await tSession.commitTransaction();
+
+        // Respond success.
+        sucRes(res, "Comment added!");
+
+    } catch (error) {
+        // Abort session on click
+        await tSession.abortTransaction();
+
+        // Get the enviroment type fromt enviroment variables
+        const NODE_ENV = process.env.NODE_ENV || 'development';
+
+        // Log to terminal for debugging if service is not in production
+        if (NODE_ENV !== 'production') {
+            pino_logger.debug(error, 'Error occured while creating new comment');
+        }
+
+        if (error.name === "ValidationError") {
+            let errors = {};
+            Object.keys(error.errors).forEach((key) => {
+                errors[key] = error.errors[key].message;
+            });
+            return errRes(res, 422, "VALIDATION_ERROR", "Missing necessary Fields")
+        }
+
+        // Log to main logbook
+        logger({
+            level: 'error',
+            origin: 'mainService',
+            originName: 'newCommentHandler',
+            message: 'Error occured while adding new comment',
+            metadata: {
+                orderId: blogId,
+                userId: authorId,
+                userType: authorRole
+            },
+            stackTrace: error
+        });
+
+        // Respond with server error.
+        return errRes(res, 500, "INTERNAL_ERROR", "Unexpected error occured");
+
+    } finally {
+        // Finally end the session.
+        await tSession.endSession();
+    }
 }

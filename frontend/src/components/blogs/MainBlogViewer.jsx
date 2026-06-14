@@ -9,6 +9,7 @@ import { MdError } from "react-icons/md";
 import { BiCommentDetail } from "react-icons/bi";
 import BlogComments from "./BlogComments";
 import { useAuth } from '../../context/AuthContext';
+import { BiX } from "react-icons/bi"
 
 function Loader() {
     return (
@@ -72,6 +73,11 @@ function MainBlogViewer() {
         return () => controller.abort();
     }, [])
 
+    const postComment = async () => {
+        // New comment body = isReply [Boolean], parentCommentId [String], content [String]
+
+    }
+
     const recordRead = async () => {
         if (!isBlogFound) return
         try {
@@ -89,6 +95,11 @@ function MainBlogViewer() {
         } catch (error) {
             // Ignore read registraion errors
         }
+    }
+
+    const clearReply = () => {
+        setReplying(false);
+        setParent({});
     }
 
     const toggleLike = async () => {
@@ -175,13 +186,19 @@ function MainBlogViewer() {
                         <BlogComments blogId={blogId} navigate={navigate} />
                     </div>
 
-                    <div className="w-full bg-gray-200 rounded-md p-4 flex mt-4">
+                    <div className="relative w-full bg-gray-200 rounded-md p-4 flex mt-4">
+                        <div className={`${isReplying ? "flex" : "hidden" } absolute -top-8 rounded-md left-0 text-sm bg-gray-200 px-3 py-2 items-center`}>
+                            Replying to: {parent?.name}
+                            <button onClick={()=>{clearReply()}} className="border rounded-sm">
+                                <BiX />
+                            </button>
+                        </div>
                         <input
                             className="w-full px-3 outline-0 border-l border-t border-b rounded-tl-md rounded-bl-md bg-white"
                             type="text"
                             placeholder="Comment"
                         />
-                        <button className="bg-gray-900 text-white px-4 py-2 rounded-tr-md rounded-br-md">
+                        <button onClick={()=>{postComment()}} className="bg-gray-900 text-white px-4 py-2 rounded-tr-md rounded-br-md">
                             Post
                         </button>
                     </div>

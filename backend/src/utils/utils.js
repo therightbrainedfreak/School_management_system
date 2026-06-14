@@ -76,3 +76,25 @@ export const sanitizeHTML = (dirty) => {
     ],
   });
 };
+
+export const errRes = (res, status, code, message, extra = {}) =>
+    res.status(status).json({
+        success: false,
+        status: status,
+        error: { code, message, ...extra },
+        metadata: {
+            server_time: Date.now(),
+            version: process.env.API_VERSION || 'v0.0.0'
+        }
+    });
+
+export const sucRes = (res, message, data = {}) =>
+    res.status(200).json({
+        success: true,
+        status: 200,
+        data: { message: message, ...data },
+        metadata: {
+            server_time: Date.now(),
+            version: process.env.API_VERSION || 'v0.0.0'
+        }
+    });

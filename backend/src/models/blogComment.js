@@ -4,7 +4,12 @@ import { nanoid } from 'nanoid';
 const commentSchema = new mongoose.Schema({
     commentId: { type: String, required: true, index: true, unique: true },
     blogId: { type: String, required: true, index: true },
-    parentCommentId: { type: String, default: null },
+    parentId: { type: String, default: null, index: true },
+    rootId: { type: String, default: null, index: true },
+    replyTo: {
+        id: { type: String, default: null },
+        name: { type: String, default: null }
+    },
     author: {
         id: { type: String, required: true },
         role: { type: String, required: true },
@@ -17,7 +22,7 @@ const commentSchema = new mongoose.Schema({
     }
 }, { timestamps: true })
 
-commentSchema.pre('validate', function() {
+commentSchema.pre('validate', function () {
     if (this.isNew && !this.commentId) {
         this.commentId = nanoid(12);
     }

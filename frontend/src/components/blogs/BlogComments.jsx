@@ -18,7 +18,7 @@ function Loader() {
     )
 }
 
-function BlogComments({ blogId, navigate }) {
+function BlogComments({ blogId, navigate, isReplying, setReplying, parent, setParent }) {
     // states definition
     const [page, setPage] = useState(1);
     const [limit, setLimit] = useState(8);
@@ -112,10 +112,7 @@ function BlogComments({ blogId, navigate }) {
                 </div>
                 <div className="ml-7">
                     <p className="text-sm">{comment.content}</p>
-                    {comment.isAvailable ? <CommentActions comment={comment} toggleCommentLike={toggleCommentLike} /> : ""}
-                </div>
-                <div className="replies-button">
-                    
+                    {comment.isAvailable ? <CommentActions comment={comment} toggleCommentLike={toggleCommentLike} isReplying={isReplying} setReplying={setReplying} parent={parent} setParent={setParent} /> : ""}
                 </div>
             </div>
         </div>

@@ -11,24 +11,22 @@ import {
 import { authenticate, softAuthenticate } from "../middlewares/authenticator.js";
 import { authorise } from "../middlewares/authoriser.js";
 import { identifier } from "../controllers/authController.js";
-import {
-    categories,
-    composeBlog,
-    getMyBlogs,
-    suggestions,
-    tags,
-    getSpBlog,
-    updateBlog,
-    softDeleteBlog,
-    blogsFeed,
-    getFeedBlog,
-    registerRead,
-    newComment,
-    getComments,
-    getReplies,
-    toggleLike,
-    recordBlogLike
-} from "../controllers/blogController.js";
+import { newCommentHandler } from "../controllers/blogController.js";
+import { categories } from "../controllers/blogController.js";
+import { composeBlog } from "../controllers/blogController.js";
+import { getMyBlogs } from "../controllers/blogController.js";
+import { suggestions } from "../controllers/blogController.js";
+import { tags } from "../controllers/blogController.js";
+import { getSpBlog } from "../controllers/blogController.js";
+import { updateBlog } from "../controllers/blogController.js";
+import { softDeleteBlog } from "../controllers/blogController.js";
+import { blogsFeed } from "../controllers/blogController.js";
+import { getFeedBlog } from "../controllers/blogController.js";
+import { registerRead } from "../controllers/blogController.js";
+import { getComments } from "../controllers/blogController.js";
+import { getReplies } from "../controllers/blogController.js";
+import { toggleLike } from "../controllers/blogController.js";
+import { recordBlogLike } from "../controllers/blogController.js";
 
 const route = Router();
 
@@ -51,7 +49,7 @@ route.post('/blogs-latest/:blogId/read', softAuthenticate, registerRead); // reg
 // ****************** BLOG COMMENTS **************** //
 
 route.get('/comments/:blogId/pagination', softAuthenticate, getComments); // load comments of a blog with pagination
-route.post('/comments/:blogId', authenticate, authorise('admin', 'superuser', 'student', 'parent', 'teacher'), newComment); // post new comment to a blog
+route.post('/comments/:blogId', authenticate, authorise('admin', 'superuser', 'student', 'parent', 'teacher'), newCommentHandler); // post new comment to a blog
 route.put('/comments/:commentId', authenticate, authorise('admin', 'superuser', 'student', 'parent', 'teacher'), ()=>{}); // edit a comment
 route.delete('/comments/:commentId', authenticate, authorise('admin', 'superuser', 'student', 'parent', 'teacher'), ()=>{}); // delete a comment
 route.get('/comments/:commentId/replies', softAuthenticate, getReplies); // load replies with pagination
