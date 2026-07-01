@@ -1540,20 +1540,7 @@ export const recordBlogLike = async (req, res) => {
     const userId = req.user?.id;
     const blogId = req.params.blogId;
 
-    if (!blogId) {
-        return res.status(400).json({
-            success: false,
-            status: 400,
-            error: {
-                code: "INCOMPLETE_DATA",
-                message: "BlogId not provided."
-            },
-            metadata: {
-                server_time: Date.now(),
-                version: process.env.API_VERSION || 'v0.0.0'
-            }
-        });
-    }
+    if (!blogId) return errRes(res, 400, "INCOMPLETE_DATA", "Necessary fields missing");
 
     const tSession = await mongoose.startSession();
 
@@ -1562,37 +1549,16 @@ export const recordBlogLike = async (req, res) => {
         tSession.startTransaction();
 
         const rBlog = await blog.findOne({ blogId: blogId, isAvailable: true }, null, { session: tSession });
+
         if (!rBlog) {
             await tSession.abortTransaction();
-            return res.status(404).json({
-                success: false,
-                status: 404,
-                error: {
-                    code: "NOT_FOUND",
-                    message: "requested content not found."
-                },
-                metadata: {
-                    server_time: Date.now(),
-                    version: process.env.API_VERSION || 'v0.0.0'
-                }
-            });
+            return errRes(res, 404, "NOT_FOUND", "Dependant data not found");
         }
 
         const ownerId = rBlog.author.id;
         if (userId !== ownerId) {
             await tSession.abortTransaction();
-            return res.status(402).json({
-                success: false,
-                status: 402,
-                error: {
-                    code: "NOT_ALLOWED",
-                    message: "action not allowed."
-                },
-                metadata: {
-                    server_time: Date.now(),
-                    version: process.env.API_VERSION || 'v0.0.0'
-                }
-            });
+            return errRes(res, 402, "NOT_ALLOWED", "Action now allowed");
         }
 
         const isLiked = rBlog.metadata.likes.includes(userId);
@@ -1607,18 +1573,12 @@ export const recordBlogLike = async (req, res) => {
 
         await tSession.commitTransaction();
 
-        return res.json({
-            success: true,
-            status: 200,
-            data: {
-                liked: !isLiked,
-                likesCount: updatedBlog.metadata.likes.length
-            },
-            metadata: {
-                server_time: Date.now(),
-                version: process.env.API_VERSION || 'v0.0.0'
-            }
-        })
+        const data = {
+            liked: !isLiked,
+            likesCount: updatedBlog.metadata.likes.length
+        }
+
+        sucRes(res, "Toggled like", data);
 
     } catch (error) {
         // Abort db transaction on failure
@@ -1645,18 +1605,8 @@ export const recordBlogLike = async (req, res) => {
         });
 
         // Respond with server error
-        return res.status(500).json({
-            success: false,
-            status: 500,
-            error: {
-                code: "INTERNAL_ERROR",
-                message: "Unexpected error occured while processing blog likes."
-            },
-            metadata: {
-                server_time: Date.now(),
-                version: process.env.API_VERSION || 'v0.0.0'
-            }
-        });
+        return errRes(res, 500, "INTERNAL_ERROR", "Unexpected error occured while toggling blog like")
+
     } finally {
         await tSession.endSession();
     }
@@ -1667,23 +1617,11 @@ export const registerRead = async (req, res) => {
     const userId = req.user?.id ?? null;
     const blogId = req.params.blogId;
 
-    if (!blogId) {
-        res.status(400).json({
-            success: false,
-            status: 400,
-            error: {
-                code: "INCOMPLETE_DATA",
-                message: "Blog id not provided."
-            },
-            metadata: {
-                server_time: Date.now(),
-                version: process.env.API_VERSION || 'v0.0.0'
-            }
-        });
-    }
+    if (!blogId) return errRes(res, 400, "INCOMPLETE_DATA", "Necessary fields missing.")
 
     // create mongoose session
     const tSession = await mongoose.startSession();
+
     try {
         // Start the tranaction
         tSession.startTransaction();
@@ -1700,20 +1638,11 @@ export const registerRead = async (req, res) => {
         }
 
         await tSession.commitTransaction()
-
-        res.json({
-            success: true,
-            status: 200,
-            data: {
-                message: "Read Recorded!"
-            },
-            metadata: {
-                server_time: Date.now(),
-                version: process.env.API_VERSION || 'v0.0.0'
-            }
-        });
+        
+        sucRes(res, "Read Recorded!")
 
     } catch (error) {
+
         logger({
             level: 'error',
             origin: 'mainService',
@@ -1724,18 +1653,9 @@ export const registerRead = async (req, res) => {
             },
             stackTrace: error
         });
-        res.status(500).json({
-            success: false,
-            status: 500,
-            error: {
-                code: "INTERNAL_ERROR",
-                message: "Unexpected error occured while registering blog read."
-            },
-            metadata: {
-                server_time: Date.now(),
-                version: process.env.API_VERSION || 'v0.0.0'
-            }
-        });
+
+        return errRes(res, 500, "INTERNAL_ERROR", "Unexpected error occured while registering a read to the blog")
+
     } finally {
         await tSession.endSession()
     }
@@ -1747,20 +1667,7 @@ export const toggleLike = async (req, res) => {
     const commentId = req.params.commentId;
 
     // Precheck blogId
-    if (!commentId) {
-        return res.status(400).json({
-            success: false,
-            status: 400,
-            error: {
-                code: "INCOMPLETE_DATA",
-                message: "BlogId not provided."
-            },
-            metadata: {
-                server_time: Date.now(),
-                version: process.env.API_VERSION || 'v0.0.0'
-            }
-        });
-    }
+    if (!commentId) return errRes(res, 400, "INCOMPLETE DATA", "Necessary data fields missing")
 
     // Create a mongoose session
     const tSession = await mongoose.startSession();
@@ -1776,18 +1683,7 @@ export const toggleLike = async (req, res) => {
         if (!comment) {
             // Abort further transaction
             await tSession.abortTransaction();
-            return res.status(404).json({
-                success: false,
-                status: 404,
-                error: {
-                    code: "NOT_FOUND",
-                    message: "requested content not found."
-                },
-                metadata: {
-                    server_time: Date.now(),
-                    version: process.env.API_VERSION || 'v0.0.0'
-                }
-            });
+            return errRes(res, 404, "NOT_FOUND", "Dependent data not found")
         }
 
         // Check if the owner requested the content
@@ -1795,18 +1691,7 @@ export const toggleLike = async (req, res) => {
         if (userId !== ownerId) {
             // Abort further transaction
             await tSession.abortTransaction();
-            return res.status(402).json({
-                success: false,
-                status: 402,
-                error: {
-                    code: "NOT_ALLOWED",
-                    message: "action not allowed."
-                },
-                metadata: {
-                    server_time: Date.now(),
-                    version: process.env.API_VERSION || 'v0.0.0'
-                }
-            });
+            return errRes(res, 402, "NOT_ALLOWED", "Action now allowed")
         }
 
         // Store if the user is already liked or not
@@ -1825,18 +1710,12 @@ export const toggleLike = async (req, res) => {
         // Commit transactions
         await tSession.commitTransaction();
 
-        return res.json({
-            success: true,
-            status: 200,
-            data: {
-                liked: !isLiked,
-                likesCount: updatedComment.metadata.likes.length
-            },
-            metadata: {
-                server_time: Date.now(),
-                version: process.env.API_VERSION || 'v0.0.0'
-            }
-        })
+        const data = {
+            liked: !isLiked,
+            likesCount: updatedComment.metadata.likes.length
+        }
+
+        return sucRes(res, "Operation success", data);
 
     } catch (error) {
 
@@ -1864,18 +1743,7 @@ export const toggleLike = async (req, res) => {
         });
 
         // Respond with server error
-        return res.status(500).json({
-            success: false,
-            status: 500,
-            error: {
-                code: "INTERNAL_ERROR",
-                message: "Unexpected error occured while processing likes."
-            },
-            metadata: {
-                server_time: Date.now(),
-                version: process.env.API_VERSION || 'v0.0.0'
-            }
-        });
+        return errRes(res, 500, "INTERNAL_ERROR", "Unexpected error occured while processing likes")
 
     } finally {
         await tSession.endSession();
@@ -1892,20 +1760,7 @@ export const getComments = async (req, res) => {
     const userId = req.user?.id ?? null;
 
     // Precheck blog id
-    if (!blogId) {
-        res.status(400).json({
-            success: false,
-            status: 400,
-            error: {
-                code: "INCOMPLETE_DATA",
-                message: "Blog id not provided."
-            },
-            metadata: {
-                server_time: Date.now(),
-                version: process.env.API_VERSION || 'v0.0.0'
-            }
-        });
-    }
+    if (!blogId) return errRes(res, 400, "INCOMPLETE_DATA", "Missing necessary fields");
 
     // Create a Mongoose transaction session
     const tSession = await mongoose.startSession();
@@ -1941,7 +1796,7 @@ export const getComments = async (req, res) => {
                 $lookup: {
                     from: 'blogcomments',
                     localField: 'commentId',
-                    foreignField: 'parentCommentId',
+                    foreignField: 'parentId',
                     as: 'replies'
                 }
             },
@@ -2035,18 +1890,7 @@ export const getComments = async (req, res) => {
         });
 
         // Respond with server error
-        return res.status(500).json({
-            success: false,
-            status: 500,
-            error: {
-                code: "INTERNAL_ERROR",
-                message: "Unexpected error occured while loading comments."
-            },
-            metadata: {
-                server_time: Date.now(),
-                version: process.env.API_VERSION || 'v0.0.0'
-            }
-        });
+        return errRes(res, 500, "INTERNAL_ERROR", "Unexpected Error while loading comments");
 
     } finally {
         // End the transaction session after processing request
@@ -2057,134 +1901,105 @@ export const getComments = async (req, res) => {
 
 // Replies controller
 export const getReplies = async (req, res) => {
-    // Initial data load
+    // Initial data extraction.
     const page = Math.max(1, parseInt(req.query.page) || 1 );
     const limit = Math.min(20, Math.max(1, parseInt(req.query.limit) || 10));
     const commentId = req.params.commentId;
     const userId = req.user?.id ?? null;
 
-    // Precheck blog id
-    if (!commentId) {
-        res.status(400).json({
-            success: false,
-            status: 400,
-            error: {
-                code: "INCOMPLETE_DATA",
-                message: "comment id not provided."
-            },
-            metadata: {
-                server_time: Date.now(),
-                version: process.env.API_VERSION || 'v0.0.0'
-            }
-        });
-    }
+    // Precheck blog id.
+    if (!commentId) return errRes(res, 400, "INCOMPLETE_DATA", "Missing necessary data");
 
-    // Create a Mongoose transaction session
+    // Create a Mongoose transaction session.
     const tSession = await mongoose.startSession();
 
-    // Perform all critical tasks in try catch isolation
+    // Perform all critical tasks in try catch isolation.
     try {
-
-        // Start the db transaction
+        // Start the db transaction.
         tSession.startTransaction();
 
-        const total = await blogComment.countDocuments({ parentCommentId: commentId }, null, { session: tSession });
+        // Count total docs for pagination.
+        const total = await blogComment.countDocuments({ rootId: commentId }, null, { session: tSession });
 
+        // Process requested data.
         const results = await blogComment.aggregate([
-            // Get all the comments for a specific blog
-            { $match: { parentCommentId: commentId } },
 
-            // Sort to newest first
+            // Get all the comments for a specific blog.
+            { $match: { rootId: commentId } },
+
+            // Sort to newest first.
             { $sort: { createdAt: -1 } },
 
-            // Pagination
+            // Pagination.
             { $skip: (page - 1) * limit },
             { $limit: limit },
 
-            // Join replies
-            { 
-                $lookup: {
-                    from: 'blogcomments',
-                    localField: 'commentId',
-                    foreignField: 'parentCommentId',
-                    as: 'replies'
-                }
-            },
-
-            // Add field for replies and likes count
+            // Add field for replies and likes count.
             {
                 $addFields: {
-                    repliesCount: { $size: '$replies' },
                     likesCount: { $size: '$metadata.likes' },
                     isLiked: { $in: [userId, '$metadata.likes'] }
                 }
             },
 
-            // remove replies array leaving only count
-            { $unset: 'replies' },
-
-            // Return required fields
+            // Return required fields.
             { 
                 $project: {
                     commentId: 1,
                     content: 1,
                     author: 1,
                     isAvailable: 1,
-                    repliesCount: 1,
                     likesCount: 1,
                     isLiked: 1,
-                    createdAt: 1
+                    createdAt: 1,
+                    parentId: 1,
                 }
             }
+
         ], {
             session: tSession
         })
 
-        // Post process comments
+        // Post process comments.
         const processedReplies = results.map((
             { _id, author: { id, ...restAuthor }, content, isAvailable, createdAt, ...rest}
         ) => ({
             ...rest,
             author: restAuthor,
             content: isAvailable ? content : "[Reply removed]",
-            createdAt: formatDate(createdAt)
+            createdAt: formatDate(createdAt),
+            isOwned: id === userId ? true : false,
+            isAvailable: isAvailable
         }))
 
+        // Commit all db transactions.
         await tSession.commitTransaction();
 
-        res.json({
-            success: true,
-            status: 200,
-            data: {
-                comments: processedReplies,
-                pagination: {
-                    page,
-                    limit,
-                    totalPages: Math.ceil(total / limit),
-                    hasNextPage: page * limit < total,
-                    totalDocs: total
-                }
-            },
-            metadata: {
-                server_time: Date.now(),
-                version: process.env.API_VERSION || 'v0.0.0'
-            }
-        })
+        // Define pagination payload.
+        const pagination = {
+            page,
+            limit,
+            totalPages: Math.ceil(total / limit),
+            hasNextPage: page * limit < total
+        }
+
+        // Respond with success.
+        sucRes(res, "Fetched success!", { replies: processedReplies, pagination })
         
     } catch (error) {
 
-        // Abort db transaction on failure
+        // Abort db transaction on failure.
         await tSession.abortTransaction();
 
-        // Get the enviroment type fromt enviroment variables
+        // Get the enviroment type fromt enviroment variables.
         const NODE_ENV = process.env.NODE_ENV || 'development';
 
-        // Log to terminal for debugging if service is not in production
+        // Log to terminal for debugging if service is not in production.
         if (NODE_ENV !== 'production') {
             pino_logger.debug(error, 'Error occured while sending replies to the client');
         }
 
-        // Log to main logbook
+        // Log to main logbook.
         logger({
             level: 'error',
             origin: 'mainService',
@@ -2196,25 +2011,13 @@ export const getReplies = async (req, res) => {
             stackTrace: error
         });
 
-        // Respond with server error
-        return res.status(500).json({
-            success: false,
-            status: 500,
-            error: {
-                code: "INTERNAL_ERROR",
-                message: "Unexpected error occured while loading replies."
-            },
-            metadata: {
-                server_time: Date.now(),
-                version: process.env.API_VERSION || 'v0.0.0'
-            }
-        });
+        // Respond with server error.
+        return errRes(res, 500, "INTERNAL_ERROR", "Unexpected error occured while loading replies");
 
     } finally {
-        // End the transaction session after processing request
+        // Close the session.
         await tSession.endSession();
     }
-    // **********END OF THE CONTROLLER
 }
 
 export const newCommentHandler = async (req, res) => {
@@ -2323,6 +2126,86 @@ export const newCommentHandler = async (req, res) => {
 
     } finally {
         // Finally end the session.
+        await tSession.endSession();
+    }
+}
+
+export const editCommentHandler = async (req, res) => {
+    // User data from authoriser.
+    const authorId = req.user?.id;
+    const authorRole = req.user?.role;
+    const authorName = req.user?.name;
+
+    // New Comment data.
+    const commentId = req.params.commentId;
+    const newContent = req.body.content || null;
+
+    // Null check incoming data
+    if (!commentId || !newContent) return errRes(res, 400, "INCOMPLETE_DATA", "Missing necessary data");
+
+    const tSession = await mongoose.startSession();
+
+    try {
+        // Start mongoose transaction.
+        tSession.startTransaction();
+
+        const oldComment = await blogComment.findOne({ commentId: commentId, isAvailable: true }, null, { session: tSession });
+        if (!oldComment) {
+            await tSession.abortTransaction();
+            errRes(res, 404, "NOT_FOUND", "Requested content not found");
+        }
+
+        const ownerId = oldComment.author.id;
+        if (authorId !== ownerId) {
+            // Abort further transaction
+            await tSession.abortTransaction();
+            return errRes(res, 402, "NOT_ALLOWED", "Action now allowed");
+        }
+
+        const updatedComment = await blogComment.updateOne(
+            { commentId: commentId, isAvailable: true },
+            { $set: { content: sanitizeText(newContent, 2000) } },
+            { session: tSession }
+        );
+
+        if (!updatedComment.acknowledged) {
+            throw new Error("Not updated");
+        }
+
+        await tSession.commitTransaction();
+
+        sucRes(res, "Updated!");
+
+    } catch (error) {
+        // Abort session on click
+        await tSession.abortTransaction();
+
+        // Get the enviroment type fromt enviroment variables
+        const NODE_ENV = process.env.NODE_ENV || 'development';
+
+        // Log to terminal for debugging if service is not in production
+        if (NODE_ENV !== 'production') {
+            pino_logger.debug(error, 'Error occured while creating new comment');
+        }
+
+        // Log to main logbook
+        logger({
+            level: 'error',
+            origin: 'mainService',
+            originName: 'newCommentHandler',
+            message: 'Error occured while editing comment',
+            metadata: {
+                orderId: blogId,
+                userId: authorId,
+                userType: authorRole
+            },
+            stackTrace: error
+        });
+
+        // Respond with server error.
+        return errRes(res, 500, "INTERNAL_ERROR", "Unexpected error occured");
+
+    } finally {
         await tSession.endSession();
     }
 }

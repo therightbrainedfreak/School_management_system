@@ -2,6 +2,7 @@ import { ThreeDots } from "react-loader-spinner";
 import { useState, useEffect, useRef } from "react";
 import CommentActions from "./shards/CommentActions";
 import { useAuth } from "../../context/AuthContext";
+import CommentReplies from "./shards/CommentReplies";
 
 function Loader() {
     return (
@@ -111,9 +112,10 @@ function BlogComments({ blogId, navigate, isReplying, setReplying, parent, setPa
                     </div>
                 </div>
                 <div className="ml-7">
-                    <p className="text-sm">{comment.content}</p>
+                    <p className="text-sm my-1">{comment.content}</p>
                     {comment.isAvailable ? <CommentActions comment={comment} toggleCommentLike={toggleCommentLike} isReplying={isReplying} setReplying={setReplying} parent={parent} setParent={setParent} /> : ""}
                 </div>
+                <CommentReplies repliesCount={comment.repliesCount} commentId={comment.commentId} />
             </div>
         </div>
     ))

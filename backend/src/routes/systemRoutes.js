@@ -1,12 +1,10 @@
 import { Router } from "express";
 
-import {
-    getStudentApplications,
-    getStudentApplication,
-    studentApplicationHandler,
-    uploadKycDoc,
-    finalKyc
-} from "../controllers/applicationsController.js";
+import { getStudentApplication } from "../controllers/applicationsController.js";
+import { getStudentApplications } from "../controllers/applicationsController.js";
+import { studentApplicationHandler } from "../controllers/applicationsController.js";
+import { uploadKycDoc } from "../controllers/applicationsController.js";
+import { finalKyc } from "../controllers/applicationsController.js";
 
 import { authenticate, softAuthenticate } from "../middlewares/authenticator.js";
 import { authorise } from "../middlewares/authoriser.js";
