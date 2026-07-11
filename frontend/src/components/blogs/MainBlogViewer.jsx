@@ -4,10 +4,7 @@ import { ThreeDots } from "react-loader-spinner";
 import ContentView from "./shards/ContentView";
 import { IoHeart, IoHeartOutline } from "react-icons/io5";
 import { PiReadCvLogo, PiReadCvLogoFill } from 'react-icons/pi'
-import { IoIosShareAlt } from "react-icons/io";
 import { MdError } from "react-icons/md";
-import { BiCommentDetail } from "react-icons/bi";
-import BlogComments from "./BlogComments";
 import { useAuth } from '../../context/AuthContext';
 import { BiX } from "react-icons/bi"
 
@@ -164,10 +161,6 @@ function MainBlogViewer() {
                         </div>
 
                         <div className="cursor-pointer flex items-center justify-center select-none gap-1 border rounded-full py-1 pl-3 pr-3.5">
-                            <IoIosShareAlt /> Share
-                        </div>
-
-                        <div className="cursor-pointer flex items-center justify-center select-none gap-1 border rounded-full py-1 pl-3 pr-3.5">
                             <MdError /> Report
                         </div>
                     </div>
@@ -179,25 +172,6 @@ function MainBlogViewer() {
                         <p>{blog.author.name + ", " + blog.author.role.slice(0, 1).toUpperCase() + blog.author.role.slice(1)}</p>
                         <p>Published: {blog.createdAt}</p>
                     </div>
-                </div>
-
-                <div className="comments my-2" aria-label="comments">
-                    <h1 className="my-1 py-1 border-b text-lg flex items-center gap-2"><BiCommentDetail /> Comments</h1>
-                </div>
-
-                <div className="flex flex-col w-full max-h-60 overflow-y-auto">
-                    <BlogComments blogId={blogId} navigate={navigate} />
-                </div>
-
-                <div className="relative w-full bg-gray-200 rounded-md p-4 flex mt-4">
-                    <input
-                        className="w-full px-3 outline-0 border-l border-t border-b rounded-tl-md rounded-bl-md bg-white"
-                        type="text"
-                        placeholder="Comment"
-                    />
-                    <button onClick={() => { postComment() }} className="bg-gray-900 text-white px-4 py-2 rounded-tr-md rounded-br-md">
-                        Post
-                    </button>
                 </div>
 
             </div>
