@@ -1,62 +1,95 @@
 import { createContext, useContext, useState, useEffect } from "react";
+import { useQuery, useQueryClient, useMutation } from '@tanstack/react-query'
 
 const AuthContext = createContext(null);
 
+async function fetchCurrentUser() {
+    const res = await fetch('/api/v1/me', { credentials: 'include' });
+    if (!res.ok) {
+        if (res.status === 401) return null;
+        throw new Error('Unknow error');
+    }
+    const finalResponse = await res.json();
+    const userData = finalResponse.data.user;
+    return {
+        userId: userData.userId,
+        role: userData.userType,
+        name: userData.username
+    }
+}
+
+async function loginRequest(credentials) {
+    const res = await fetch('/api/v1/auth/login', {
+        method: "POST",
+        headers: { 'Content-Type': 'application/json' },
+        credentials: "include",
+        body: JSON.stringify(credentials)
+    })
+    if (!res.ok) {
+        const err = await res.json().catch(()=>({}));
+        throw new Error(err.error.message || "Unknow Error")
+    }
+    const finalResponse = await res.json();
+    const userData = finalResponse.data.user;
+    return {
+        userId: userData.id,
+        role: userData.role,
+        name: userData.name
+    };
+}
+
+async function logoutRequest() {
+    const res = await fetch('/api/v1/auth/logout', {
+        method: "POST",
+        credentials: "include"
+    });
+    if (!res.ok) {
+        throw new Error('Logout Failed');
+    }
+}
+
 export function AuthProvider({ children }) {
-    const [user, setUser] = useState(null);
-    const [loading, setLoading] = useState(true);
+    const queryClient = useQueryClient();
 
-    useEffect(() => {
-        const controller = new AbortController();
-        verifySession(controller.signal);
-        return () => controller.abort();
-    }, [])
+    const {
+        data: user,
+        isLoading,
+        error,
+    } = useQuery({
+        queryKey: ['auth', 'me'],
+        queryFn: fetchCurrentUser,
+        staleTime: 5 * 60 * 1000,
+        retry: false,
+    })
 
-    const verifySession = async (signal) => {
-        const url = `/api/v1/me`;
+    const loginMutation = useMutation({
+        mutationFn: loginRequest,
+        onSuccess: (user) => {
+            queryClient.setQueryData(['auth', 'me', 'user'], user);
+        },
+    })
+    
+    const logoutMutation = useMutation({
+        mutationFn: logoutRequest,
+        onSuccess: () => {
+            queryClient.setQueryData(['auth', 'me', 'user'], null);
+            queryClient.clear();
+        }
+    })
 
-        setLoading(true);
-
-        try {
-            const request = await fetch(url, { signal, credentials: 'include' });
-            if (signal.aborted) return;
-            const response = await request.json();
-
-            if (response.success) {
-                const userData = response.data.user;
-                const userObject = {
-                    userId: userData.userId,
-                    role: userData.userType,
-                    name: userData.username
-                }
-                setUser(userObject);
-            } else {
-                setUser(null);
-                console.warn("Not logged In");
-            }
-
-        } catch (error) {
-            if (error.name === 'AbortError') return;
-            console.error('Fetch error', error);
-            setUser(null);
-
-        } finally {
-            if (!signal.aborted) {   // ← only set loading false if NOT aborted
-                setLoading(false);
-            }
-        };
-    }
-
-    const login = (userData) => {
-        setUser(userData);
-    }
-
-    const logout = () => {
-        setUser(null);
+    const value = {
+        user,
+        isLoading,
+        error,
+        login: loginMutation.mutateAsync,
+        logout: logoutMutation.mutateAsync,
+        isLoggingIn: loginMutation.isPending,
+        isLoggingOut: logoutMutation.isPending,
+        loginError: loginMutation.error,
     }
 
     return (
-        <AuthContext.Provider value={{ user, loading, login, logout }}>
+        <AuthContext.Provider value={value}>
             {children}
         </AuthContext.Provider>
     )

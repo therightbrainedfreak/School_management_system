@@ -16,7 +16,7 @@ function Landing() {
   return (
     <>
       <SEO
-        title="Portal"
+        title="Landing"
         description="Welcome to This&That School, a vibrant community where every child belongs. We believe in nurturing the whole student—balancing top-tier academics with arts, athletics, and social-emotional development. Join our family and watch your child thrive."
         canonical="https://yourdomain.com/"
         og={{
@@ -25,12 +25,12 @@ function Landing() {
       />
 
       <main>
-        <header className='section-1 max-sm:mx-4 max-sm:mt-8 flex flex-col gap-4'>
-          <h1 className='max-sm:text-2xl max-sm:text-center'>Putting your <strong className='libertinus-key'>child's</strong> future in great motion</h1>
-          <p className='max-sm:text-[16px] max-sm:text-center'>We just don't give our students only lectures but real life experiences. Learn smartly with us. We teach 'One Smart Lesson' at a time!</p>
+        <header className='section-1 max-sm:mx-4 max-sm:mt-8 my-8 mx-8 flex flex-col gap-4'>
+          <h1 className='max-sm:text-2xl max-sm:text-center text-6xl'>Putting your <strong className='libertinus-key'>child's</strong> future in great motion</h1>
+          <p className='max-sm:text-[16px] max-sm:text-center text-4xl'>We just don't give our students only lectures but real life experiences. Learn smartly with us. We teach 'One Smart Lesson' at a time!</p>
         </header>
 
-        <div className="actions flex items-center justify-center max-sm:mx-4 max-sm:my-6 gap-4">
+        <div className="actions flex max-sm:items-center max-sm:justify-center justify-start max-sm:mx-4 max-sm:my-6 mx-8 gap-4">
           <button className='font-bold border-2 p-2 w-34 flex items-center justify-center gap-2 rounded-sm' onClick={()=>{navigate('/learn-more')}}>
             Learn more
             <FaArrowRight size={"12px"}/>
@@ -41,22 +41,22 @@ function Landing() {
           </button>
         </div>
 
-        <div className='decorative-banner-1 max-sm:py-6 max-sm:mx-4 max-sm:my-8 flex flex-col items-center justify-center bg-mauve-800 rounded-lg gap-6'>
+        <div className='decorative-banner-1 mx-8 my-8 max-sm:py-6 py-18 max-sm:mx-4 max-sm:my-8 flex max-sm:flex-col flex-row items-center justify-center bg-mauve-800 rounded-lg gap-6'>
           <h1 className='border-2 border-dashed border-white text-white w-fit px-4 py-2 '>12k+ Happy Students</h1>
           <div className='metrics flex flex-row'>
             <div className='metric-item flex flex-col items-center justify-center m-4'>
               <span className='text-[#fcbd34] text-4xl'>40+</span>
-              <p className='text-white'>Instructors</p>
+              <p className='text-white md:text-2xl'>Instructors</p>
             </div>
             {/* <div className='decorative-line border-l-2 border-white h-26'></div> */}
             <div className='metric-item flex flex-col items-center justify-center m-4'>
               <span className='text-[#fcbd34] text-4xl'>20+</span>
-              <p className='text-white'>Years</p>
+              <p className='text-white md:text-2xl'>Years</p>
             </div>
             {/* <div className='decorative-line border-l-2 border-white h-26'></div> */}
             <div className='metric-item flex flex-col items-center justify-center m-4'>
               <span className='text-[#fcbd34] text-4xl'>99+</span>
-              <p className='text-white'>Others</p>
+              <p className='text-white md:text-2xl'>Others</p>
             </div>
           </div>
         </div>

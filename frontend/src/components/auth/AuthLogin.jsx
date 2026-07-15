@@ -11,7 +11,7 @@ import { IoEye, IoEyeOff, IoKeyOutline } from "react-icons/io5";
 function AuthLogin() {
     const navigate = useNavigate()
     const [searchParams, setSearchParams] = useSearchParams();
-    const { user, login, logout } = useAuth();
+    const { user, login, isLoggingIn } = useAuth();
 
     // Url params
     const callbackUrl = searchParams.get("callbackUrl") ?? '/';
@@ -32,7 +32,6 @@ function AuthLogin() {
     const [role, setRole] = useState('');
     const [inputError, setInputError] = useState('');
     const [passwordError, setPasswordError] = useState('');
-    const [isLoading, setisLoading] = useState(false);
     const [isPasswordVisible, setPasswordVisibility] = useState(false);
 
     // Side effects
@@ -65,36 +64,13 @@ function AuthLogin() {
             return
         }
 
-        setisLoading(true)
-
-        const controller = new AbortController()
-
         try {
-            const res = await fetch('/api/v1/auth/login', {
-                method: 'POST',
-                signal: controller.signal,
-                headers: { 'Content-Type': 'application/json' },
-                credentials: 'include',
-                body: JSON.stringify({ user_id, password, role: role.toLowerCase()}),
-            })
-
-            const data = await res.json()
-
-            if (data.success) {
-                login(data.data.user);
-                toast.success("Login Success", { autoClose: 1000 });
-                await new Promise(resolve => setTimeout(resolve, 1100))
-                navigate(callbackUrl, {replace: true})
-            } else {
-                toast.error(data.error.message);
-            }
-
+            await login({user_id, password, role: role.toLowerCase()});
+            toast.success("Login Success", { autoClose: 1000 });
+            await new Promise(resolve => setTimeout(resolve, 1100))
+            navigate(callbackUrl, { replace: true })
         } catch (error) {
-            if (error.name !== 'AbortError') {
-                console.error('Something went wrong. Try again.')
-            }
-        } finally {
-            setisLoading(false)
+            toast.error(error.message)
         }
     }
 
@@ -164,9 +140,9 @@ function AuthLogin() {
                     <button
                         className="flex items-center justify-center loader-parent border border-gray-800 px-3 py-2 w-full bg-blue-500 cursor-pointer"
                         type="submit"
-                        disabled={isLoading}
+                        disabled={isLoggingIn}
                     >
-                        {isLoading ? <ThreeDots width={'40px'} height={'24px'} wrapperClass="loader-parent" color="#ffffff"/> : <span className="text-white font-bold">Login</span>} 
+                        {isLoggingIn ? <ThreeDots width={'40px'} height={'24px'} wrapperClass="loader-parent" color="#ffffff"/> : <span className="text-white font-bold">Login</span>} 
                     </button>
                     <div className="flex items-center gap-2 w-60">
                         <div className="flex-1 border-t border-grey-100" />

@@ -164,7 +164,7 @@ export const loginController = async (req, res) => {
             data: {
                 user: {
                     id: user.userId,
-                    username: user.username,
+                    name: user.name,
                     role: user.role
                 }
             },

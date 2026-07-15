@@ -6,11 +6,11 @@ import { useAuth } from "../context/AuthContext.jsx"
 
 function DashboardButton() {
     const navigate = useNavigate()
-    const { user, loading } = useAuth();
+    const { user, isLoading } = useAuth();
 
     return (
         <div className="max-sm:mr-3 cursor-pointer">
-            {loading ? <MdDownloading size={"26px"}/> : user ? <BiSolidDashboard onClick={()=>{navigate(`/dashboard`)}} size={"26px"}/> : ""}
+            {isLoading ? <MdDownloading size={"26px"}/> : user ? <BiSolidDashboard onClick={()=>{navigate(`/dashboard`)}} size={"26px"}/> : ""}
         </div>
     )
 }

@@ -1,27 +1,22 @@
 import { useAuth } from "../../context/AuthContext"
-import { useNavigate } from "react-router-dom";
+import { replace, useNavigate } from "react-router-dom";
 
 import React, { useState } from "react";
 import Popup from "./dashboard_components/Popup";
 
 function SuperUserDashboard() {
-    const { user, logout } = useAuth();
+    const { user, logout, isLoggingOut } = useAuth();
     const navigate = useNavigate();
     const [isTermsOpen, setIsTermsOpen] = useState(false);
     const [isAlertOpen, setIsAlertOpen] = useState(false);
 
     const logoutUser = async () => {
         try {
-            const req = await fetch('/api/v1/auth/logout', { method: "POST" })
-            const response = await req.json()
-            if (!response.success) {
-                null
-            } else {
-                logout()
-                navigate('/', { replace: true })
-            }
+            await logout();
+            // await new Promise(resolve => setTimeout(resolve, 1000));
+            // navigate('/', replace);
         } catch (error) {
-            console.error(error);
+            console.error(error.message);
         }
     }
 
