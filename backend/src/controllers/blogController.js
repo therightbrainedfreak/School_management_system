@@ -325,7 +325,10 @@ export const getSpBlog = async (req, res) => {
             metadata: {
                 category: ublog.metadata.category,
                 tags: ublog.metadata.tags,
-                likes: ublog.metadata.likes.length
+                likes: ublog.metadata.likes.length,
+                reads: ublog.metadata.reads.length,
+                createdAt: formatDate(ublog.createdAt),
+                updatedAt: formatDate(ublog.updatedAt)
             },
             title: ublog.title,
             content: ublog.content,

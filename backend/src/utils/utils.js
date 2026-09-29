@@ -61,6 +61,13 @@ export const generateKycId = () => {
     return generateId;
 }
 
+export const generateFeatureFlagId = () => {
+    const int = "23456789ABCDEFGHJKMNPQRSTUVWXYZabcdefghjkmnpqrstuvwxyz";
+    const rInt = customAlphabet(int, 16);
+    const generateId = rInt();
+    return generateId;
+}
+
 export const sanitizeHTML = (dirty) => {
     return purify.sanitize(dirty, {
         ALLOWED_TAGS: [

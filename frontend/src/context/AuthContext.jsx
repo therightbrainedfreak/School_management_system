@@ -65,15 +65,15 @@ export function AuthProvider({ children }) {
     const loginMutation = useMutation({
         mutationFn: loginRequest,
         onSuccess: (user) => {
-            queryClient.setQueryData(['auth', 'me', 'user'], user);
+            queryClient.setQueryData(['auth', 'me'], user);
         },
     })
     
     const logoutMutation = useMutation({
         mutationFn: logoutRequest,
         onSuccess: () => {
-            queryClient.setQueryData(['auth', 'me', 'user'], null);
-            queryClient.clear();
+            queryClient.setQueryData(['auth', 'me'], null);
+            queryClient.removeQueries({ queryKey: ['auth', 'me'], exact: false });
         }
     })
 

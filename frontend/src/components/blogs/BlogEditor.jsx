@@ -169,7 +169,7 @@ function BlogEditor({ pTitle, type, allowDraft, blogId, blogData, submissionPath
 
     const DraftButton = () => {
         return (
-            <button onClick={() => { saveDraft() }} className='cursor-pointer flex items-center justify-center bg-cyan-200 px-3 py-2 rounded-md select-none w-30'>
+            <button onClick={() => { saveDraft() }} className='text-gray-800 cursor-pointer flex items-center justify-center bg-cyan-200 px-3 py-2 rounded-md select-none w-30'>
                 {
                     isSavingDraft
                         ? <Loader />
@@ -181,7 +181,7 @@ function BlogEditor({ pTitle, type, allowDraft, blogId, blogData, submissionPath
 
     const FinalButton = () => {
         return (
-            <button onClick={() => { publishBlog() }} className='cursor-pointer flex flex-row items-center justify-center gap-1 bg-green-200 px-3 py-2 rounded-md select-none w-25'>
+            <button onClick={() => { publishBlog() }} className='text-gray-800 cursor-pointer flex flex-row items-center justify-center gap-1 bg-green-200 px-3 py-2 rounded-md select-none w-25'>
                 {
                     isPublishing
                         ? <Loader />
@@ -345,7 +345,7 @@ function BlogEditor({ pTitle, type, allowDraft, blogId, blogData, submissionPath
                     </div>
                 </h1>
                 <div className='relative flex flex-col gap-2 w-fit'>
-                    <div className={`${category ? "" : "hidden"} bg-gray-100 font border w-fit px-1.5 rounded-md select-none`}>
+                    <div className={`${category ? "" : "hidden"} font border w-fit px-1.5 rounded-md select-none`}>
                         {category.toUpperCase()}
                     </div>
                     <input

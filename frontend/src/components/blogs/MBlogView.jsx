@@ -1,9 +1,10 @@
 import { useEffect, useState } from "react"
 import { ThreeDots } from "react-loader-spinner"
 import { MdEditNote, MdDelete } from "react-icons/md";
-import { FaArrowLeft } from "react-icons/fa";
-import { replace, useNavigate } from "react-router-dom";
+import { redirect, replace, useNavigate } from "react-router-dom";
 import { ToastContainer, toast, Slide } from 'react-toastify';
+import Popup from "../../pages/dashboards/dashboard_components/Popup";
+import { TiInfoOutline } from "react-icons/ti";
 
 // Loader for all tasks
 function Loader() {
@@ -25,7 +26,7 @@ function Loader() {
 function MBlogView({blogId, setSearchParams}) {
     const [isBlogLoading, setBlogLoading] = useState(true)
     const [isDeleting, setDeleting] = useState(false);
-    const [deleteConfirmation, setDeleteConfirmation] = useState(false)
+    const [isDeleteConfirmationOpen, setDeleteConfirmation] = useState(false);
     const [blog, setBlog] = useState({})
     const navigate = useNavigate()
     const messageMap = {
@@ -117,31 +118,21 @@ function MBlogView({blogId, setSearchParams}) {
                 draggablePercent={40}
             />
 
-            <div
-                onClick={() => setSearchParams({}, { replace: true })}
-                className="bg-gray-200 font-black w-fit h-fit flex flex-row my-2 pl-3 pr-4 py-2 gap-2 rounded-md items-center justify-center"
-            >
-                <FaArrowLeft />
-                Back
-
+            <div className="text-2xl font-bold underline mb-4 mt-4">
+                Stats
             </div>
 
-            <div className=" rounded-md flex flex-col gap-0.5">
+            <div className={`stats font-mono bg-page py-2 px-3 shadow-el-2 rounded-md mt-4 mb-4 ${blog.status.state === "REJECTED" ? 'border-t-red-400' : 'blog.status.state' === 'LIVE' ? 'bg-green-300' : 'bg-amber-200'}`}>
+                <p className="text-sm">Current Status: {blog.status.state}</p>
+                <p className="text-sm">Message: { blog.status.state === 'REJECTED' ? blog.status.reasonForRejection : messageMap[blog.status.state]}</p>
+                <p className="text-sm">Likes: { blog.metadata.likes }</p>
+                <p className="text-sm">Reads: { blog.metadata.reads || "undefined" } </p>
+                <p className="text-sm">Created On: {blog.metadata.createdAt}</p>
+                <p className="text-sm">Last Activity: {blog.metadata.updatedAt}</p>
+            </div>
 
-                <div className={`${blog.status.state === "REJECTED" ? 'bg-red-400' : blog.status.state === 'LIVE' ? 'bg-green-300' : 'bg-amber-200'} p-3 pb-1.5 rounded-md flex flex-col items-start gap-1 my-4`}>
-                    <div className="px-1 border-2 w-fit rounded-sm font-bold text-[12px] select-none">
-                        {blog.status.state}
-                    </div>
-
-                    <div className="text-gray-800">
-                        {
-                            blog.status.state === 'REJECTED'
-                            ? blog.status.reasonForRejection
-                            : messageMap[blog.status.state]
-                        }
-                    </div>
-                </div>
-
+            <div className="text-2xl font-bold underline mb-4">
+                Overview
             </div>
             
             <div className="mb-4">
@@ -153,28 +144,31 @@ function MBlogView({blogId, setSearchParams}) {
                 <article className="special-content-div my-4 break-normal leading-6 flex flex-col gap-2" dangerouslySetInnerHTML={{__html: blog.content.replace(/&nbsp;/g, ' ')}}>
                 </article>
 
-                <h1>Author -</h1>
-                <p>{`${blog.author.name}, ${blog.author.role}`}</p>
-
             </div>
 
-            <div className="flex flex-col gap-4 mb-4">
-                <button onClick={()=>{navigate(`/blogs/${blogId}`, {replace: true})}} className="w-fit flex flex-row items-center justify-center gap-1 bg-green-200 px-3 py-2 rounded-md"><MdEditNote size={"20px"}/> Edit</button>
-                <div>
-                    <h1>Delete this Blog</h1>
-                    <p className="text-sm text-green-700">Deleting this blog doesn't permanently removes this from the system. Just makes it hidden to the all the ERP users.</p>
-                    <p className="text-sm text-red-700">Action is not reversible</p>
-                        <div>
-                            {!deleteConfirmation
-                                ? <p onClick={()=>{setDeleteConfirmation(!deleteConfirmation)}} className="underline select-none cursor-pointer">delete now</p>
-                                : <div className="flex gap-4">
-                                    <p onClick={()=>{setDeleteConfirmation(!deleteConfirmation)}} className="text-md text-gray-900 underline select-none cursor-pointer">Cancel</p>
-                                    <p onClick={()=>{deleteBlog(blogId)}} className="text-sm select-none cursor-pointer">Delete</p>
-                                </div>
-                            }
-                        </div>
+            <div className="text-2xl font-bold underline mb-4">
+                Actions
+            </div>
+
+            <div className="flex gap-4 mb-4">
+                <button onClick={()=>{navigate(`/blogs/${blogId}`, {replace: true})}} className="text-black w-fit flex flex-row items-center justify-center gap-1 bg-green-200 px-3 py-2 rounded-md"><MdEditNote size={"20px"}/> Edit</button>
+                <button onClick={() => setDeleteConfirmation(true)} className="text-black w-fit flex flex-row items-center justify-center gap-1 bg-red-200 px-3 py-2 rounded-md"><MdDelete size={"20px"}/> Delete</button>
+            </div>
+
+            <Popup
+                isOpen={isDeleteConfirmationOpen}
+                onClose={() => setDeleteConfirmation(false)}
+                title={"Confirmation"}>
+                <div className="text-red-600 mt-2">Do you really want to delete ?</div>
+                <div className="flex items-center justify-center flex-col gap-2 mt-3 mb-3">
+                    <button className="border w-full rounded-sm p-1 text-center" onClick={() => setDeleteConfirmation(false)}>Cancel</button>
+                    <div onClick={() => deleteBlog(blogId).then(() => redirect(-1))} className="underline">Delete</div>
                 </div>
-            </div>
+                <div className="text-gray-500 flex items-center gap-2">
+                    <div className="mb-2"><TiInfoOutline size={"24px"} /></div>
+                    <p className="text-sm">Deleting a blog does not permanently removes it from the system.</p>
+                </div>
+            </Popup>
             
         </div>
     )

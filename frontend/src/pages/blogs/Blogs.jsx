@@ -3,6 +3,7 @@ import { useEffect, useState } from "react"
 import PaginationNav from "../../components/blogs/shards/PaginationNav"
 import FeedBlog from "../../components/FeedBlog"
 import BlogsNavbar from "../../components/blogs/BlogsNavbar"
+import BlogCardSkeleton from "../../components/blogs/BlogCardSkeleton"
 
 function Loader() {
     return (
@@ -65,7 +66,9 @@ function Blogs() {
             <div className="flex flex-col gap-3">
                 {
                     isLoading
-                        ? <div className="mx-4 my-6 grid place-content-center"><Loader /></div>
+                        ? [1, 2, 3].map(()=> (
+                            <BlogCardSkeleton/>
+                        ))
                         : <FeedBlog blogs={blogs} />
                 }
             </div>

@@ -1,5 +1,6 @@
 import React, { useEffect, useRef } from 'react';
 import { createPortal } from 'react-dom';
+import { IoIosCloseCircleOutline } from "react-icons/io";
 
 function Popup({ isOpen, onClose, title, children }) {
   const dialogRef = useRef(null);
@@ -31,13 +32,13 @@ function Popup({ isOpen, onClose, title, children }) {
       ref={dialogRef} 
       onClose={onClose} 
       onClick={handleBackdropClick}
-      className="custom-popup"
+      className="custom-popup rounded-2xl p-6 fixed top-1/2 -translate-y-1/2 left-1/2 -translate-x-1/2 min-w-60"
     >
       <div className="popup-header">
-        <h3>{title}</h3>
-        <button className="popup-close-btn" onClick={onClose} aria-label="Close popup">
-          &times;
-        </button>
+        <h3 className='text-xl'>{title}</h3>
+        {/* <button className="popup-close-btn" onClick={onClose} aria-label="Close popup">
+          <IoIosCloseCircleOutline size={"24px"}/>
+        </button> */}
       </div>
       
       <div className="popup-content">

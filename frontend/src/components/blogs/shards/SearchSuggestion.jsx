@@ -63,7 +63,7 @@ function SearchSuggestions(props) {
                 animate={{ y: 0, opacity: 1 }}
                 transition={{ duration: 0.3 }}
                 exit={{ y: 20, opacity: 0 }}
-                className="suggestions py-3 border border-white absolute top-full bg-gray-100/5 mt-2 rounded-lg backdrop-blur-md h-fit min-w-40 flex flex-col items-start justify-start gap-2 text-sm max-h-60 overflow-y-auto z-20 shadow-inner shadow-white">
+                className="suggestions py-3 absolute top-full bg-gray-200 mt-2 rounded-lg h-fit min-w-40 flex flex-col items-start justify-start gap-2 text-sm text-gray-800 max-h-60 overflow-y-auto z-20 shadow-el-2">
 
                 <span className="flex flex-col px-2" >
                     {props.query ? props.query.length < 3 ? `Type ${3 - props.query.length} more character to search` : "" : "Type atleast 3 characters to start search"}

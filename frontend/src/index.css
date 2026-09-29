@@ -2,8 +2,6 @@
 
 @import "tailwindcss";
 
-@import "tailwindcss";
-
 @theme {
   --color-page: var(--page-bg);
   --color-surface: var(--surface);
@@ -83,33 +81,34 @@
 }
 
 * {
-    box-sizing: border-box;
+  box-sizing: border-box;
 }
 
 body {
-    margin: 0;
-    padding: 0;
-    font-family: "Google Sans", sans-serif;
+  margin: 0;
+  padding: 0;
+  font-family: "Google Sans", sans-serif;
 }
 
 .libertinus-key {
-    font-family: "Libertinus Keyboard", system-ui;
+  font-family: "Libertinus Keyboard", system-ui;
 }
 
 .menu-link {
-    cursor: pointer;
-    user-select: none;
-    text-decoration: underline;
-    font-size: 1.2rem;
+  cursor: pointer;
+  user-select: none;
+  text-decoration: underline;
+  font-size: 1.2rem;
 }
 
 .t-bg {
-    transition: background 300ms ease-in-out;
+  transition: background 300ms ease-in-out;
 }
 
 .quill-wrapper .ql-toolbar {
   border-radius: 8px 8px 0 0;
-  border-color: #e5e7eb; /* tailwind gray-200 */
+  border-color: #e5e7eb;
+  /* tailwind gray-200 */
 }
 
 .quill-wrapper .ql-container {
@@ -119,11 +118,15 @@ body {
   font-size: 16px;
 }
 
-.special-content-div  p {
-    word-break: keep-all;
+.special-content-div p {
+  word-break: keep-all;
 }
 
-.special-content-div h1, h2, h2, h4, h5 {
-    word-break: keep-all;
-    margin-top: 10px;
+.special-content-div h1,
+h2,
+h2,
+h4,
+h5 {
+  word-break: keep-all;
+  margin-top: 10px;
 }

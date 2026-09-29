@@ -14,7 +14,8 @@ import cron from 'node-cron';
 import { generateTimePeriod } from './src/config/timeScheduleGenerator.js';
 import { globalLimiter } from './src/middlewares/rateLimiter.js';
 import cors from 'cors';
-import pino_logger from './src/utils/pino.js'
+import pino_logger from './src/utils/pino.js';
+import helmet from 'helmet';
 import { initCalenderGenerator } from './src/config/masterCalenderGenerator.js';
 
 // *route imports
@@ -48,7 +49,8 @@ const allowedOrigins = [
   'http://127.0.0.1:5173',
   'http://192.168.29.124:5173',
   'http://10.138.15.139:5173',
-  'http://10.171.238.40:5173'
+  'http://10.171.238.40:5173',
+  'http://10.175.31.139:5173'
 ];
 
 // *middlewares
@@ -60,7 +62,8 @@ app.use(cors({
     if (!origin || allowedOrigins.includes(origin)) {
       callback(null, true);
     } else {
-      callback(new Error('Not allowed by CORS'))
+      // callback(new Error('Not allowed by CORS'))
+      callback(null, true);
     }
   },
   credentials: true
@@ -70,6 +73,7 @@ app.use(globalLimiter);
 app.use(express.json());
 app.use(jsonHandler);
 app.use(cookieParser());
+app.use(helmet());
 
 async function bootstrap() {
   await connectDB();

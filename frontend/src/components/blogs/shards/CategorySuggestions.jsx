@@ -24,14 +24,14 @@ function CategorySearchSuggestions(props) {
                 initial={{opacity: 0}}
                 animate={{opacity: 1}}
                 transition={{duration: 0.2}}
-                className='bg-gray-100 z-20 rounded-br-md rounded-bl-md p-0.5 text-sm absolute top-full w-full flex flex-col gap-0.5 max-h-40 overflow-y-auto    '
+                className='bg-page shadow-el-2 z-20 rounded-br-md rounded-bl-md p-0.5 text-sm absolute top-full w-full flex flex-col gap-0.5 max-h-40 overflow-y-auto    '
             >
                 {props.isLoading 
                     ? <SearchLoader/>
                     : suggestions.map(sug => (
                         <div
                         onClick={()=>{props.setCategory(sug.label); props.setQuery('')}}
-                            className='px-1 rounded-sm bg-gray-200 hover:bg-gray-900 hover:text-white cursor-pointer' key={sug.id}>
+                            className='px-1 rounded-sm hover:bg-gray-900 hover:text-white cursor-pointer' key={sug.id}>
                             {sug.label}
                         </div>
                     ))

@@ -5,6 +5,7 @@ import { ThreeDots } from "react-loader-spinner";
 import MBlog from "../../components/blogs/MBlog";
 import { useSearchParams } from "react-router-dom";
 import MBlogView from "../../components/blogs/MBlogView";
+import MyBlogCardSkeleton from "../../components/blogs/MyBlogCardSkeleton";
 
 function MyBlogs() {
     const [isBlogsLoading, setBlogsLoading] = useState(true)
@@ -64,7 +65,13 @@ function MyBlogs() {
     }
 
     const RenBlogs = () => {
-        if (isBlogsLoading) return <Loader />
+        if (isBlogsLoading) return (
+            <div className="flex flex-col gap-4">
+                {[1, 2, 3].map(() => (
+                <MyBlogCardSkeleton />
+                ))}
+            </div>
+        )
 
         return blogs.map((b) => (
             <MBlog cAt={b.createdAt} uAt={b.updatedAt} setSearchParams={setSearchParams} key={b.blogId} blogId={b.blogId} metadata={b.metadata} author={b.author} status={b.status} title={b.title}/>
@@ -94,7 +101,7 @@ function MyBlogs() {
 
             <MyBlogsNavbar/>
 
-            <div className="flex flex-col gap-2 my-2">
+            <div className="flex flex-col gap-2 mb-4">
                 <RenBlogs/>
             </div>
             

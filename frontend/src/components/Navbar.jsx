@@ -5,14 +5,19 @@ import { useNavigate } from 'react-router-dom'
 import { BiMenu, BiX, BiSolidDashboard } from "react-icons/bi"
 import { motion, AnimatePresence } from 'framer-motion'
 import { useAuth } from '../context/AuthContext';
+import { TbMenuDeep } from "react-icons/tb";
+import { useTheme } from "../hooks/useTheme"
+import { VscColorMode } from "react-icons/vsc";
+import { MdLightMode, MdDarkMode } from "react-icons/md";
 
 
 function Navbar() {
     const [isOpen, alterMenuState] = useState(false)
     const navigate = useNavigate();
-    const { user, loading } = useAuth();
+    const { user, isLoading } = useAuth();
+    const { dark, toggle } = useTheme();
 
-    const linkStyles = "text-gray-500 hover:text-gray-900 hover:underline transition duration-180 ease-in-out cursor-pointer"
+    const linkStyles = "hover:text-primary-300 font-bold hover:underline text-copy transition duration-180 ease-in-out cursor-pointer"
 
     useEffect(() => {
         if (isOpen) {
@@ -26,31 +31,31 @@ function Navbar() {
 
     return (
         <>
-            <nav className='landing-navbar flex flex-row items-center max-sm:mx-4 max-sm:py-2 mx-8 py-2 border-b border-gray-950'>
-                <div className="logo font-bold text-neutral-900 text-[22px] select-none mr-auto">This&That School</div>
-                <DashboardButton />
+            <nav className="border-b-2 border-dashed bg-surface z-10 text-copy landing-navbar flex flex-row items-center max-sm:px-4 py-2 max-md:px-4 px-8 sticky top-0">
+                <div className="logo font-bold text-copy text-[22px] select-none mr-auto">This&That School</div>
                 <div className='hidden max-md:flex' onClick={() => {
                     alterMenuState(!isOpen)
                 }}>
-                    {!isOpen ? <BiMenu size={"36px"} /> : <BiX size={"36px"} />}
+                    {!isOpen ? <TbMenuDeep size={"30px"} /> : "" }
                 </div>
-                <div>
-                    <ul className='max-md:hidden flex gap-3'>
-                        <li className={linkStyles} onClick={()=>{
-                            navigate('/auth?action=login')
-                        }}>{user ? "" : "Login"}</li>
+                <div className='max-md:hidden'>
+                    <ul className='flex gap-3'>
                         <li className={linkStyles}>Utilities</li>
                         <li className={linkStyles}>Notices</li>
                         <li className={linkStyles}>Complaints</li>
                         <li className={linkStyles}>About Us</li>
                     </ul>
                 </div>
+                <DashboardButton />
+                <div className='menu-theme-button flex max-md:hidden border w-fit p-2 rounded-full ml-2' onClick={toggle}>
+                    {dark ? <MdDarkMode size={"22px"} /> : <MdLightMode size={"22px"} />}
+                </div>
             </nav>
 
-            <div className={`menu z-10 scroll-none absolute bg-gray-400/60 top-0 right-0 h-full w-full ${isOpen ? "flex items-center justify-end" : "hidden"}`} onClick={() => { alterMenuState(!isOpen) }}>
+            <div className={`menu z-10 scroll-none fixed bg-gray-400/60 top-0 right-0 h-full w-full ${isOpen ? "flex items-center justify-end" : "hidden"}`} onClick={() => { alterMenuState(!isOpen) }}>
                 <AnimatePresence>
                     <motion.ul
-                        className='bg-gray-950 text-white w-80 h-full px-14 py-12 flex flex-col gap-2 rounded-tl-3xl rounded-bl-3xl  relative'
+                        className='bg-surface text-copy w-80 h-full px-14 py-12 flex flex-col gap-2 rounded-tl-3xl rounded-bl-3xl  relative'
                         initial={{ x: "-100vw" }}
                         animate={{ x: isOpen ? 0 : "100vw" }}
                         exit={{ x: "-100vw" }}
@@ -59,13 +64,6 @@ function Navbar() {
                             e.stopPropagation();
                         }}
                     >
-                        <li className='menu-link' onClick={() => {
-                            navigate('/auth?action=login')
-                            alterMenuState(!isOpen)
-                        }}
-                        >
-                            Login
-                        </li>
 
                         <li className='menu-link'>Utilities</li>
 
@@ -90,10 +88,13 @@ function Navbar() {
                                 alterMenuState(!isOpen)
                             }} />
                         </span>
+                        <div className='menu-theme-button hidden max-md:flex mt-auto border w-fit px-2 py-2 pr-3 rounded-md' onClick={toggle}>
+                            { dark ? <MdDarkMode size={"24px"} /> : <MdLightMode size={"24px"}/> }
+                            <div className='font-bold ml-2'>Theme</div>
+                        </div>
                     </motion.ul>
                 </AnimatePresence>
             </div>
-
         </>
     )
 }

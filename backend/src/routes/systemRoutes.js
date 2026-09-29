@@ -26,6 +26,8 @@ import { recordBlogLike } from "../controllers/blogController.js";
 // import { toggleLike } from "../controllers/blogController.js";
 // import { newCommentHandler } from "../controllers/blogController.js";
 
+import { returnConfig } from "../controllers/dashboardConfigController.js";
+
 const route = Router();
 
 // **** Identification route
@@ -66,5 +68,9 @@ route.delete('/blogs/:blogId', authenticate, authorise('admin', 'superuser', 'st
 route.get('/blogs/bss', suggestions) // Blog suggestions.
 route.get('/blogs/categories', categories); // Blog categories.
 route.get('/blogs/tags', tags); // Blog tags.
+
+// ******************** FEATURE FLAG MANAGEMENT ******************* //
+
+route.get('/dashboard-config', authenticate, authorise('admin', 'superuser', 'backoffice', 'student', 'parent', 'teacher'), returnConfig);
 
 export default route;

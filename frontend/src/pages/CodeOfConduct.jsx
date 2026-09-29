@@ -1,6 +1,6 @@
 function CodeOfConduct() {
     return (
-        <div className="max-sm:mx-4">
+        <div className="max-sm:mx-4 mx-8">
             <h1 className="main-heading py-1 text-2xl font-black">Official Code of Conduct & Compliance</h1>
             <h1>Rules for System Access, Deactivation, and Suspension</h1>
             <h2 className="sub-heading font-bold mt-3 mb-1">Student Rules (Code: STU-00)</h2>

@@ -145,9 +145,9 @@ function MainBlogViewer() {
     return (
         <div className="max-sm:mx-4 my-2 flex flex-col gap-2">
             <ContentView htmlContent={blog.content} title={blog.title} recordRead={recordRead} />
-            <div className="actions my-2 py-2">
+            <div className="actions">
 
-                <div className="flex flex-col gap-2 items-start justify-start">
+                <div className="flex flex-col items-start justify-start">
 
                     <div aria-label="actions" className="flex items-center gap-2">
                         <div onClick={() => { toggleLike() }} className="hover:bg-gray-800 hover:text-white click:bg-gray-800 click:text-white cursor-pointer flex items-center justify-center select-none gap-1 border rounded-full py-1 pl-3 pr-3.5">
@@ -166,7 +166,7 @@ function MainBlogViewer() {
                     </div>
                 </div>
 
-                <div aria-label="author" className="flex flex-row items-center text-sm text-gray-600 mt-4 max-sm:-ml-3">
+                <div aria-label="author" className="flex flex-row items-center text-sm text-primary-400 my-8 max-sm:-ml-3">
                     <p className="-rotate-90 text-[10px] font-bold border-b -mr-1">Author</p>
                     <div>
                         <p>{blog.author.name + ", " + blog.author.role.slice(0, 1).toUpperCase() + blog.author.role.slice(1)}</p>

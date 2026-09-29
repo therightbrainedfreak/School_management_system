@@ -4,7 +4,7 @@ import { FaArrowRight } from "react-icons/fa";
 function HelpCenter() {
     const navigate = useNavigate();
     return (
-        <div className="max-sm:mx-4 py-4">
+        <div className="max-sm:mx-4 py-4 mx-8">
             <h1 className="text-2xl font-bold">Help Center</h1>
             <section className="my-2">
                 <h1 className="font-bold">Reach us out</h1>
@@ -23,8 +23,8 @@ function HelpCenter() {
             <section className="my-2 font-bold">
                 <h1>Request Callback</h1>
                 <p className="font-normal text-sm">Leave your phone number below so we can call you back.</p>
-                <form className="flex flex-row gap-2 bg-gray-200 my-2 rounded-md p-2">
-                    <input type="number" className="bg-gray-100 w-full px-3 rounded-sm" placeholder="Phone Number"/>
+                <form className="flex flex-row gap-2 bg-page my-2 rounded-md p-2">
+                    <input type="number" className="bg-page outline-none w-full px-3 rounded-sm" placeholder="Phone Number"/>
                     <button type="submit" className="flex items-center justify-center text-gray-500 bg-gray-100 rounded-sm p-4">
                         <FaArrowRight/>
                     </button>
