@@ -1,4 +1,5 @@
 import { MdOutlineSupervisedUserCircle, MdOutlineSpaceDashboard, MdErrorOutline } from "react-icons/md";
+import { MdOutlineFeaturedVideo  } from "react-icons/md";
 import { LuLogs } from "react-icons/lu";
 
 const navConfig = [
@@ -28,11 +29,11 @@ const navConfig = [
     },
     {
         id: 3,
-        label: "Test Link",
-        path: "test",
-        icon: MdErrorOutline,
-        roles: ["superuser", "backoffice", "teacher", "admin", "student", "parent"],
-        module: "test_module"
+        label: "Manage Features",
+        path: "features",
+        icon: MdOutlineFeaturedVideo,
+        roles: ["superuser"],
+        module: "manage_feature_flags"
     }
 ];
 

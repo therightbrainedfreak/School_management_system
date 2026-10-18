@@ -7,7 +7,6 @@ export const returnConfig = async (req, res) => {
     // Extract client identity data forwarded from the authoriser middleware.
     const userId = req.user?.id;
     const userRole = req.user?.role;
-    const userName = req.user?.name;
 
     try {
         const flags = await featureFlag.find({ allowedRoles: userRole, enabled: true }).lean();
@@ -21,7 +20,7 @@ export const returnConfig = async (req, res) => {
         sucRes(res, "Success", { flags: cleanedFlags });
 
     } catch (error) {
-        // Get the enviroment type fromt enviroment variables.
+        // Get the enviroment type from enviroment variables.
         const NODE_ENV = process.env.NODE_ENV || 'development';
 
         // Log to terminal for debugging if service is not in production.

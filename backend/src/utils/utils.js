@@ -5,6 +5,8 @@ import DOMPurify from 'dompurify';
 const window = new JSDOM('').window;
 const purify = DOMPurify(window);
 
+export const allowedRoles = ["student", "teacher", "admin", "parent", "superuser", "backoffice"];
+
 export const generateUniqueId = (role) => {
     const rolemap = {
         student: "STU",
