@@ -37,7 +37,18 @@ export const createFeatureFlag = async (req, res) => {
     })
 
     try {
-        //
+        sucRes(res, "Success", {
+            label: s_label,
+            module: s_module,
+            path: s_path,
+            description: s_desc,
+            allowedTo: s_allowedTo,
+            featureId: flagId,
+            by: {
+                userId,
+                userRole
+            }
+        })
     } catch (error) {
         // Get the enviroment type from enviroment variables.
         const NODE_ENV = process.env.NODE_ENV || 'development';

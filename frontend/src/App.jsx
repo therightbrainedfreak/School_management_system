@@ -27,7 +27,7 @@ const SuperviseUsersHome = lazy(() => import('./pages/dashboards/panel_component
 const LogsHome = lazy(() => import('./pages/dashboards/panel_components/LogsHome'))
 const ManageFeaturesHome = lazy(() => import('./pages/dashboards/panel_components/ManageFeaturesHome'))
 
-const NewFeatureForm = lazy(() => import('./pages/dashboards/panel_components/panel_pages/NewFeatureForm'));
+const FeatureForm = lazy(() => import('./pages/dashboards/panel_components/panel_pages/FeatureForm'));
 
 // test imports
 import PayPage from './material/PayPage'
@@ -103,7 +103,7 @@ function App() {
             <Route path='logs' element={<LogsHome />} />
             <Route path='features'>
               <Route index element={<ManageFeaturesHome />} />
-              <Route path='addfeature' element={<NewFeatureForm />} />
+              <Route path='featureform' element={<FeatureForm />} />
             </Route>
           </Route>
 

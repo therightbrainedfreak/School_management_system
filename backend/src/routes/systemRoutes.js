@@ -7,6 +7,7 @@ import { uploadKycDoc } from "../controllers/applicationsController.js";
 import { finalKyc } from "../controllers/applicationsController.js";
 
 import { authenticate, softAuthenticate } from "../middlewares/authenticator.js";
+import featureGuard from "../middlewares/featureGuard.js";
 import { authorise } from "../middlewares/authoriser.js";
 import { identifier } from "../controllers/authController.js";
 import { categories } from "../controllers/blogController.js";
@@ -27,6 +28,7 @@ import { recordBlogLike } from "../controllers/blogController.js";
 // import { newCommentHandler } from "../controllers/blogController.js";
 
 import { returnConfig } from "../controllers/dashboardConfigController.js";
+import { createFeatureFlag } from "../controllers/featureFlagsController.js";
 
 const route = Router();
 
@@ -72,5 +74,6 @@ route.get('/blogs/tags', tags); // Blog tags.
 // ******************** FEATURE FLAG MANAGEMENT ******************* //
 
 route.get('/dashboard-config', authenticate, authorise('admin', 'superuser', 'backoffice', 'student', 'parent', 'teacher'), returnConfig);
+route.post('/feature-flag', authenticate, authorise('superuser'), featureGuard, createFeatureFlag);
 
 export default route;
