@@ -10,6 +10,8 @@ import Landing from './pages/Landing'
 import Navbar from './components/Navbar'
 import Footer from './components/Footer'
 
+import GlobalNotFoundError from './pages/GlobalNotFoundError'
+
 const CodeOfConduct = lazy(() => import('./pages/CodeOfConduct'))
 const HelpCenter = lazy(() => import('./pages/HelpCenter'))
 const LearnMore = lazy(() => import('./pages/LearnMore'))
@@ -140,6 +142,8 @@ function App() {
           <Route path='/pg/pay' element={
             <PayPage />
           } />
+
+          <Route path='*' element={<GlobalNotFoundError />} />
         </Routes>
       </AnimatePresence>
     </Suspense>

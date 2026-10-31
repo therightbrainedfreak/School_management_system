@@ -74,6 +74,6 @@ route.get('/blogs/tags', tags); // Blog tags.
 // ******************** FEATURE FLAG MANAGEMENT ******************* //
 
 route.get('/dashboard-config', authenticate, authorise('admin', 'superuser', 'backoffice', 'student', 'parent', 'teacher'), returnConfig);
-route.post('/feature-flag', authenticate, authorise('superuser'), featureGuard, createFeatureFlag);
+route.post('/feature-flag', authenticate, authorise('superuser'), createFeatureFlag);
 
 export default route;

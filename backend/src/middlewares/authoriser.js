@@ -26,10 +26,16 @@ export const authorise = (...allowedRoles) => {
         const MODEL = modelRoleMap[userRole];
 
         // Check is the role is correct.
-        if (!MODEL) return errRes(res, 403, "INVALID_ROLE_MAP", "Role configuration error")
+        if (!MODEL) {
+            sysLogEnt.info("Authoriser", "Authorisation rejected due to model mismatch.", userId, undefined, undefined);
+            return errRes(res, 403, "INVALID_ROLE_MAP", "Role configuration error");
+        }
 
         // Check if user is allowed
-        if (!allowedRoles.includes(req.user.role)) return errRes(res, 401, "UNAUTHORISED", "User is not allowed.")
+        if (!allowedRoles.includes(req.user.role)) {
+            sysLogEnt.info("Authoriser", "Authorisation rejected, requester is not allowed to perform this action.", userId, undefined, undefined);
+            return errRes(res, 401, "UNAUTHORISED", "User is not allowed.");
+        }
 
         try {
             // Find the user info from the data base (database crosscheck).
@@ -37,10 +43,16 @@ export const authorise = (...allowedRoles) => {
             if (!info) return errRes(res, 404, "USER_NOT_FOUND", "User no longer exists.")
 
             // Check user status.
-            if (info.status !== 'active') return errRes(res, 403, "USER_DEACTIVATED", "User is not allowed or deactivated.")
+            if (info.status !== 'active') {
+                sysLogEnt.info("Authoriser", "Authorisation rejected for a deactivated user.", userId, undefined, undefined);
+                return errRes(res, 403, "USER_DEACTIVATED", "User is not allowed or deactivated.");
+            }
 
-            // Validate data.
-            if (req.user.token_version < info.jwtTokenVersion) return errRes(res, 401, "SESSION_EXPIRED", "You've been logged out.")
+            // Validate token version.
+            if (req.user.token_version !== info.jwtTokenVersion) {
+                sysLogEnt.info("Authoriser", "Authorisation rejected due to outdated JWT token version.", userId, undefined, undefined);
+                return errRes(res, 401, "SESSION_EXPIRED", "You've been logged out.");
+            }
 
             next();
 

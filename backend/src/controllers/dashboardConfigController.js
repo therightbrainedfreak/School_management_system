@@ -1,7 +1,7 @@
 import { sucRes, errRes } from "../utils/utils.js";
 import featureFlag from "../models/FeatureFlag.js";
-import { logger } from "../utils/logger.js";
 import pino_logger from "../utils/pino.js";
+import sysLogEnt from "../utils/systemLogsHandler.js";
 
 export const returnConfig = async (req, res) => {
     // Extract client identity data forwarded from the authoriser middleware.
@@ -29,17 +29,7 @@ export const returnConfig = async (req, res) => {
         }
 
         // Log to database.
-        logger({
-            level: 'error',
-            origin: 'mainService',
-            originName: 'dashboardConfigController',
-            message: 'Error serving dashboard config',
-            metadata: {
-                userId: userId,
-                usertype: userRole
-            },
-            stackTrace: error
-        });
+        sysLogEnt.error("returnConfig", "Couldn't serve dashboard config.", userId, undefined, error.message);
 
         // Error response
         return errRes(res, 500, "INTERNAL_ERROR", "Unexpected error occured while serving dashboard config");

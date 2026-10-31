@@ -11,7 +11,7 @@ function ManageFeaturesHome() {
     return (
         <div className="p-4">
             <h1 className="font-bold text-lg mb-4">Manage features</h1>
-            <div className="cards-area">
+            <div className="cards-area flex gap-3 flex-wrap">
                 {Array.from(flags).map((flag) => (
                     <FeatureCard key={flag.flagId} flag={flag}/>
                 ))}

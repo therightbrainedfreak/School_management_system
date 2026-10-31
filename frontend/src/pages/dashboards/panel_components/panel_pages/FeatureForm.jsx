@@ -1,8 +1,10 @@
-import { useEffect, useState } from "react";
+import { useState } from "react";
 import navConfig from "../../../../configurations/navConfig";
 import FloatingLabelInput from '../main_components/FloatingLabelInput'
 import FloatingLabelSelect from '../main_components/FloatingLabelSelect'
 import { useNavigate, useSearchParams } from "react-router-dom";
+import { ToastContainer, toast } from 'react-toastify';
+import { ThreeDots } from "react-loader-spinner";
 
 function FeatureForm() {
     const navigate = useNavigate();
@@ -31,15 +33,31 @@ function FeatureForm() {
         );
     };
 
-    const newFeatureRequest = async (e) => {
+    const Loader = () => {
+        return (
+            <div className="l-wrapper">
+                <ThreeDots
+                    visible={true}
+                    height="20"
+                    width="28"
+                    color="#000000"
+                    radius="9"
+                    ariaLabel="three-dots-loading"
+                    wrapperStyle={{}}
+                    wrapperClass="l-wrapper" />
+            </div>
+        )
+    }
+
+    const newFeatureRequest = async () => {
+        if (isCreating) { return toast.warn("please wait before trying again") }
         const submissionUrl = "/api/v1/feature-flag";
         try {
             setCreating(true);
             const request = await fetch(submissionUrl, {
                 method: "POST",
                 headers: {
-                    "Content-Type": "application/json",
-                    "X-Feature-Id": featureId
+                    "Content-Type": "application/json"
                 },
                 body: JSON.stringify({
                     label: name,
@@ -49,26 +67,58 @@ function FeatureForm() {
                     allowedTo: selectedRoles
                 })
             })
-            if (!request.ok) {
-                throw new Error((await request.json()).message);
+            const response = await request.json();
+
+            if (!response.success) {
+                throw new Error(response.error.message);
+            }
+
+            if (response.success) {
+                clearForm();
+                toast.success("Flag created.");
             }
         } catch (error) {
-            console.error(error);
+            toast.error(error.message);
+        } finally {
+            setCreating(false);
         }
     };
+
     const updateFeatureRequest = async (e) => { };
+
+    const clearForm = () => {
+        setName("");
+        setDescription("");
+        setModule("");
+        setPath("");
+        setRoles(["superuser"]);
+        toast.info("Form cleared.")
+    }
 
     const instructionsMap = {
         create: { label: "Name the feature and add a short description.", module: "Select the module, the sidebar tab in which the feature will be shown.", path: "Describe the relative path to the final destination of the feature.", roles: "Select the roles allowed for this feature.", submitBtnLabel: "Create" },
         update: { label: "Edit the name or the description.", module: "Change the Module.", path: "Change the path to this feature (Unintended changes may make this feature unusable).", roles: "Alter the roles accessing this feature.", submitBtnLabel: "Update" }
     }
 
-    if (!featureId) {
+    if (!isCreate && !featureId) {
         return <span className="text-red-400 text-center">Invalid path params!</span>
     };
 
     return (
         <div className="p-4 overflow-auto">
+
+            <ToastContainer
+                position="bottom-right"
+                autoClose={4000}
+                hideProgressBar={false}
+                closeButton={true}
+                closeOnClick={false}
+                pauseOnFocusLoss
+                pauseOnHover
+                draggable
+                draggablePercent={20}
+            />
+
             <h1 className="font-bold text-2xl">
                 {isCreate ? "Create New Feature" : "Edit Exisiting Feature"}
             </h1>
@@ -83,7 +133,8 @@ function FeatureForm() {
                     } else {
                         updateFeatureRequest(e);
                     }
-                }}>
+                }}
+                onReset={(e) => { e.preventDefault(); clearForm() }}>
                 <p>{isCreate ? instructionsMap.create.label : instructionsMap.update.label}</p>
                 <FloatingLabelInput
                     label="Label"
@@ -136,11 +187,18 @@ function FeatureForm() {
                         </label>
                     ))}
                 </fieldset>
-                <button
-                    type="submit"
-                    className="bg-primary-400 text-page px-3 py-3 w-fit rounded-md min-w-30 text-center hover:cursor-pointer">
-                    {isCreate ? instructionsMap.create.submitBtnLabel : instructionsMap.update.submitBtnLabel}
-                </button>
+                <div className="action-buttons flex gap-3 pt-3">
+                    <button
+                        type="submit"
+                        className="bg-primary-400 text-page px-3 py-3 w-fit rounded-md min-w-30 text-center flex items-center justify-center hover:cursor-pointer">
+                        {isCreate ? isCreating ? <Loader /> : instructionsMap.create.submitBtnLabel : instructionsMap.update.submitBtnLabel}
+                    </button>
+                    <button
+                        type="reset"
+                        className="text-primary-400 px-3 py-3 w-fit rounded-md border border-primary-400 min-w-30 text-center hover:cursor-pointer">
+                        Clear
+                    </button>
+                </div>
             </form>
         </div>
     )

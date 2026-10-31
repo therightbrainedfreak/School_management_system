@@ -1,22 +1,23 @@
+// AUTHENTICATOR FOR CHECKING OR VALIDATING JWT TOKEN ON COOKIES.
+
 import jwt from 'jsonwebtoken';
+import { errRes } from '../utils/utils.js';
+
+/**
+ * @description Middleware validates cookie and JWT Token, returns unauthorised on error.
+ * @param {object} req Express provided request object.
+ * @param {object} res Express provided response object.
+ * @param {function} next Callback. 
+ */
 
 export const authenticate = (req, res, next) => {
     // Extract token cookie from the client
     const token = req.cookies.token;
+
     if (!token) {
-        return res.status(401).json({
-            success: false,
-            status: 401,
-            error: {
-                code: "UNAUTHORISED",
-                message: "You are not authorised. Please login First.",
-            },
-            metadata: {
-                server_time: Date.now(),
-                version: "v1.0.0"
-            }
-        });
+        return errRes(res, 401, "UNAUTHORISED", "Please login first");
     }
+
     // Verify and decode the token
     try {
         const decoded = jwt.verify(token, process.env.JWT_SECRET);
@@ -25,20 +26,15 @@ export const authenticate = (req, res, next) => {
         // Callback next.
         next();
     } catch (error) {
-        res.status(401).json({
-            success: false,
-            status: 401,
-            error: {
-                code: "UNKNOWN_TOKEN",
-                message: "Coudn't recognise token"
-            },
-            metadata: {
-                server_time: Date.now(),
-                version: "v1.0.0"
-            }
-        })
+        return errRes(res, 401, "UNKNOWN_TOKEN", "Couldn't recognise token.");
     }
 };
+
+/**
+ * @description Middleware validates cookie and JWT Token, continues as guest if no token found or token is incorrect.
+ * @param {object} req Express provided request object.
+ * @param {function} next Callback. 
+ */
 
 export const softAuthenticate = (req, res, next) => {
     // Verify and decode the token

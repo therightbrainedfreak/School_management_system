@@ -16,8 +16,7 @@ const modelRoleMap = {
     backoffice: backoffice
 }
 
-// Creation, modification and deletion of super user account can be done manually directly into the database
-// as it is the user who can create a admin and backoffice.
+// Only manual and authorised super user account creation
 
 export const createUser = async (req, res) => {
     // Extract payload from the req body.
