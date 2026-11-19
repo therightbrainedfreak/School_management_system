@@ -2,6 +2,8 @@ import { startOfMonth, endOfMonth, format } from 'date-fns';
 import masterCalender from '../models/masterCalender.js';
 import pino_logger from '../utils/pino.js'
 
+const thisYear = new Date().getFullYear();
+
 export async function initCalenderGenerator(allowGenerate) {
     const currentYear = new Date().getFullYear();
     try {
@@ -61,3 +63,7 @@ async function main(year) {
     };
     pino_logger.info('Master calender generared!')
 };
+
+async function calGenV2() {
+
+}

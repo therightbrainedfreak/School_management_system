@@ -1,0 +1,298 @@
+[33mcommit 0374203a9481401ea01e28bd63008081ad150d99[m[33m ([m[1;36mHEAD[m[33m -> [m[1;32mmain[m[33m)[m
+Author: Riyaz <riyazmo602@gmail.com>
+Date:   Sat Oct 31 21:15:53 2026 +0530
+
+    chkpnt
+
+[33mcommit 7084d98ff2b9fe5474780c7724fafa89a649d02d[m[33m ([m[1;31morigin/main[m[33m, [m[1;31morigin/HEAD[m[33m)[m
+Author: Riyaz <riyazmo602@gmail.com>
+Date:   Tue Oct 27 01:20:12 2026 +0530
+
+    Optimised authoriser, added seperate logging script for capturing general server events (not tested)
+
+[33mcommit 5058aeafb022f818521fd3cf6e08540bbaeb3821[m
+Author: Riyaz <riyazmo602@gmail.com>
+Date:   Mon Oct 19 00:07:03 2026 +0530
+
+    Started development on superuser flag management section
+
+[33mcommit 64f18876843b11c330631e7cce3ee8768a38f26a[m
+Author: Mohd riyaz <158280913+therightbrainedfreak@users.noreply.github.com>
+Date:   Tue Oct 13 13:04:49 2026 +0530
+
+    Update readme.md
+
+[33mcommit 9392087387627469ca06d2dbe666baac33da8c37[m
+Author: Riyaz <riyazmo602@gmail.com>
+Date:   Wed Sep 30 02:24:34 2026 +0530
+
+    feature: started to work on feature flags based dashboard, bug fixes
+
+[33mcommit 64e8011179ce40ffa56abcbedc3acf3881c456e1[m
+Author: Riyaz <riyazmo602@gmail.com>
+Date:   Wed Jul 15 21:04:36 2026 +0530
+
+    replaced old fetch methods to tanstack queries, Bug Fixes
+
+[33mcommit 38b6a020df08c4688d834eaaed5b05c61c8fbc25[m
+Author: Riyaz <riyazmo602@gmail.com>
+Date:   Sat Jul 11 19:31:38 2026 +0530
+
+    Removed: Commenting on blogs, Optimized: blog Controller
+
+[33mcommit 25c5db539e584767024c72b2dbf3e2ed53ddb66f[m
+Author: Riyaz <riyazmo602@gmail.com>
+Date:   Thu Jul 2 00:19:52 2026 +0530
+
+    bug fixes
+
+[33mcommit a07bf2a8f7eff3472837f0fe8f91605aade240a6[m
+Author: Riyaz XD <riyazmo602@gmail.com>
+Date:   Sun Jun 14 17:53:58 2026 +0530
+
+    Fix: refactored new comment handler user can now post comment or replies on one single route, Feature: created functions for responses fixing repeatedly writing responses manually (yet to be inplemented on constrollers made before)
+
+[33mcommit 16246230f9d6a76c12d7768882fae6edba49a713[m
+Author: Riyaz XD <riyazmo602@gmail.com>
+Date:   Sun Jun 14 00:52:19 2026 +0530
+
+    feature: user can now like blogs, add comment reply to comments and like comments (backend only) | Bug fixes
+
+[33mcommit 0c9dfd5e8d52060dc1c60253fb3e316d33622990[m
+Author: Riyaz XD <riyazmo602@gmail.com>
+Date:   Fri May 29 15:15:35 2026 +0530
+
+    feature: blog static recomendations, searches with pagination, updated login page with multistep form
+
+[33mcommit 867646bdedf15e11a48f1c70fc5c99cc8b89115f[m
+Author: Riyaz XD <riyazmo602@gmail.com>
+Date:   Tue May 26 01:57:24 2026 +0530
+
+    feature: user can now update blog and delete it, role based dashboard redirections using auth context
+
+[33mcommit 7c87136b30236802c3cf25385cc41bee11f2f57b[m
+Author: Riyaz XD <riyazmo602@gmail.com>
+Date:   Tue May 19 01:36:46 2026 +0530
+
+    feat: blog editor, status display, read view with timestamps, and bug fixes
+
+[33mcommit 7cde1a0cf2073f916747851bf555b75fb26783ad[m
+Author: Riyaz XD <riyazmo602@gmail.com>
+Date:   Sat May 16 12:29:14 2026 +0530
+
+    feature: added validations to new blog fields added local draft functionality completed route for saving blog to database and bux fixes
+
+[33mcommit f172414f4528dfc3766f6bfa4fb67547c3f215af[m
+Author: Riyaz XD <riyazmo602@gmail.com>
+Date:   Wed May 13 13:11:09 2026 +0530
+
+    refactor: replaced all console logs to pino logger except controllers
+
+[33mcommit ee1a774f89cca3d719e41b4e0fb9378c785b4cf8[m
+Author: Riyaz XD <riyazmo602@gmail.com>
+Date:   Wed May 13 12:29:13 2026 +0530
+
+    refactor: backend > index.js | fixed configurations and critical bugs added graceful exits handlers implemented pino logger, handle unhandles exceptions
+
+[33mcommit 71e56158370222e6e5a7e279e8253e9c60c52578[m
+Author: Riyaz XD <riyazmo602@gmail.com>
+Date:   Tue May 12 18:52:56 2026 +0530
+
+    feature: added blog compose page to frontend and temporary categories, search suggestions, tags routes to backend
+
+[33mcommit fedc44daba109149765635711d91374ea386e443[m
+Author: Riyaz XD <riyazmo602@gmail.com>
+Date:   Sun May 10 01:30:45 2026 +0530
+
+    feature: started search implementations with debouncing
+
+[33mcommit 6b32b8a6f7eaa60b1bb588a1b25a26afa4471e06[m
+Author: Riyaz XD <riyazmo602@gmail.com>
+Date:   Thu May 7 21:00:31 2026 +0530
+
+    fix: bug fixes on authcontext daashbord redirect button added page transitions
+
+[33mcommit 884def98edfd712fae79572008cc8595ed561bdc[m
+Author: Riyaz XD <riyazmo602@gmail.com>
+Date:   Thu May 7 19:24:57 2026 +0530
+
+    fix: bug fixes for AuthContect
+
+[33mcommit cc60d5c50fdccf0a1c7581a1d464b16660a1fe97[m
+Author: Riyaz XD <riyazmo602@gmail.com>
+Date:   Thu May 7 19:17:59 2026 +0530
+
+    fix: moved AuthContext to contexts folder and updated imports
+
+[33mcommit 39441fe1022546b2d839812605983fbd4f75c8bb[m
+Author: Riyaz XD <riyazmo602@gmail.com>
+Date:   Thu May 7 18:36:27 2026 +0530
+
+    fix: regenerate package-lock.json
+
+[33mcommit ccbde69d17b60f2b1d9b6ba85634ccf038b1a1da[m
+Author: Riyaz XD <riyazmo602@gmail.com>
+Date:   Thu May 7 18:30:14 2026 +0530
+
+    Messed up the whole branch
+
+[33mcommit edaf544e1db31da7793ced6aa3a95e1418290c96[m
+Author: riyaz <mohdriyaz09@outlook.com>
+Date:   Thu May 7 15:32:40 2026 +0530
+
+    Added authContext method for login and started work on blogs
+
+[33mcommit 953e2d0154e0d05e60fd8d51c79a73e6a8b49f25[m
+Author: Riyaz XD <riyazmo602@gmail.com>
+Date:   Wed May 6 18:16:40 2026 +0530
+
+    Added readme
+
+[33mcommit 27209dd578ce7642ab4298b543e00d7eda90e104[m
+Author: Riyaz XD <riyazmo602@gmail.com>
+Date:   Wed May 6 17:43:27 2026 +0530
+
+    Cleanup commit Saying bye to the previoud un organised commits.
+
+[33mcommit a18904010d268eeca55307626a05c558639ac431[m
+Author: Riyaz XD <riyazmo602@gmail.com>
+Date:   Wed May 6 17:38:23 2026 +0530
+
+    Updated rate-limiter
+
+[33mcommit b70505c4fe5f38fb81c96aaecb4a2a2454dd4fe1[m
+Merge: a58c06b 62eaccb
+Author: Riyaz XD <riyazmo602@gmail.com>
+Date:   Wed May 6 17:01:01 2026 +0530
+
+    Merge branch 'main' of https://github.com/therightbrainedfreak/School_management_system
+
+[33mcommit a58c06ba717389d50f7930376edbc117c7637966[m
+Merge: a084640 effaf5f
+Author: Riyaz XD <riyazmo602@gmail.com>
+Date:   Wed May 6 16:32:10 2026 +0530
+
+    Add 'backend/' from commit 'effaf5f35ba736c88bbeb51222b3dd2983653250'
+    
+    git-subtree-dir: backend
+    git-subtree-mainline: a0846402c5ea6ce8a5728eb9c93d862e4b65e698
+    git-subtree-split: effaf5f35ba736c88bbeb51222b3dd2983653250
+
+[33mcommit a0846402c5ea6ce8a5728eb9c93d862e4b65e698[m
+Merge: 5096d54 59ed886
+Author: Riyaz XD <riyazmo602@gmail.com>
+Date:   Wed May 6 16:27:45 2026 +0530
+
+    Add 'frontend/' from commit '59ed8863dfa2794863b153c1eccce9652d1089d3'
+    
+    git-subtree-dir: frontend
+    git-subtree-mainline: 5096d549c4c80ffe10f121138f64f7a63c2e8838
+    git-subtree-split: 59ed8863dfa2794863b153c1eccce9652d1089d3
+
+[33mcommit 5096d549c4c80ffe10f121138f64f7a63c2e8838[m
+Author: Riyaz XD <riyazmo602@gmail.com>
+Date:   Wed May 6 16:23:09 2026 +0530
+
+    Initial commit
+
+[33mcommit 59ed8863dfa2794863b153c1eccce9652d1089d3[m
+Author: Riyaz XD <riyazmo602@gmail.com>
+Date:   Wed May 6 16:19:59 2026 +0530
+
+    Initial commit
+
+[33mcommit effaf5f35ba736c88bbeb51222b3dd2983653250[m
+Author: Riyaz XD <riyazmo602@gmail.com>
+Date:   Wed May 6 16:02:31 2026 +0530
+
+    Big Fixes
+
+[33mcommit 62eaccb1acf80da8c4a73a41fff5fe7dfe66efaf[m
+Author: Mohd riyaz <158280913+therightbrainedfreak@users.noreply.github.com>
+Date:   Wed May 6 15:35:14 2026 +0530
+
+    Initial commit
+
+[33mcommit 73ce675ad1fa16fb6aa5b0a1f957cd3aafa0811e[m
+Author: Riyaz XD <riyazmo602@gmail.com>
+Date:   Mon Apr 27 15:26:12 2026 +0530
+
+    Removed test routes and controller for reviewing, accepting and rejecting applciations. Added get me route for identification.
+
+[33mcommit dd4e885920352ff18d62f6e073a6041132df8c25[m
+Author: Riyaz XD <riyazmo602@gmail.com>
+Date:   Mon Apr 27 14:58:48 2026 +0530
+
+    switched to class based methods for kyc, added input sanitizations for new student applications, minor tweets and bug fixes.
+
+[33mcommit 69ac53637ee95582aa34a29a00b74f89e0bb8202[m
+Author: Riyaz XD <riyazmo602@gmail.com>
+Date:   Sun Apr 19 18:20:04 2026 +0530
+
+    feature: Added upload aadhar and paperless kyc function.
+
+[33mcommit 65161c3bb7909c74a80cdb5bdb25a24a67296b40[m
+Author: Riyaz XD <riyazmo602@gmail.com>
+Date:   Thu Apr 16 12:35:06 2026 +0530
+
+    Checkpoint for changing the application system and user schemas.
+
+[33mcommit 7633c8783f46d178f80091eafec973d45a7b886c[m
+Author: Riyaz XD <riyazmo602@gmail.com>
+Date:   Thu Apr 9 13:08:25 2026 +0530
+
+    Implemented express rate limiter.
+
+[33mcommit 95bac6afc3d68972850907f249835159aa6c55b9[m
+Author: Riyaz XD <riyazmo602@gmail.com>
+Date:   Wed Apr 8 20:17:50 2026 +0530
+
+    Added route for rejecting applications.
+
+[33mcommit 2bfdfe43e04f93981c06204bb583e2c5962aa6b4[m
+Author: Riyaz XD <riyazmo602@gmail.com>
+Date:   Wed Apr 8 13:33:42 2026 +0530
+
+    Added new route for setting draft application to processing for review with notifer for notifying applicant for the status and history log creator for status of the application, which can be used for future support.
+
+[33mcommit 2ae3d3666817b7f78aac923288b8047961ab365a[m
+Author: Riyaz XD <riyazmo602@gmail.com>
+Date:   Tue Apr 7 12:19:14 2026 +0530
+
+    Critical bug fixes for time schedule generator.
+
+[33mcommit 0dad223ded6f6a139315183f4f3d45ec87d5d948[m
+Author: Riyaz XD <riyazmo602@gmail.com>
+Date:   Mon Apr 6 19:10:27 2026 +0530
+
+    added daily time span generator as a cron job (not tested yet) did little tweaks to user schemas and added some required schema for scheduling.
+
+[33mcommit 8f032ecdf72a3e8635d5ad003090e0ba5f7e7cb2[m
+Author: Riyaz XD <riyazmo602@gmail.com>
+Date:   Fri Mar 27 22:36:54 2026 +0530
+
+    Implemented user actions e.g., activating acount, deactivation, suspension, drop account and added account history logger for these action.
+
+[33mcommit 7cb46496d00030a0cc932535c1e4971ad8d6ca52[m
+Author: Riyaz XD <riyazmo602@gmail.com>
+Date:   Fri Mar 27 17:22:11 2026 +0530
+
+    Added backoffice model
+
+[33mcommit 256aea0ca9eb0d525ccb3eff586c3dbc7c4ec80e[m
+Author: Riyaz XD <riyazmo602@gmail.com>
+Date:   Fri Mar 27 17:20:29 2026 +0530
+
+    added backoffice model and patched the rolemodels for backffice refined models for discalimer addition
+
+[33mcommit b0d4cf0412c1c5423c45021b0aa1b2d7e1d08805[m
+Author: Riyaz XD <riyazmo602@gmail.com>
+Date:   Fri Mar 27 16:33:28 2026 +0530
+
+    switched from seperated admin creation super user route to unified route for all type of users.
+
+[33mcommit 5087df7392c5ed40689c5dd3f36116f7c6bfd68f[m
+Author: Riyaz XD <riyazmo602@gmail.com>
+Date:   Fri Mar 27 14:53:36 2026 +0530
+
+    Initial commit: Login / Logout system working, admin creation, activation and deactivation active through individual su/admin route, global main calender ready, draft applications implemented.

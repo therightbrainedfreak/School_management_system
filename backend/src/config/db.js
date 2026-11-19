@@ -7,6 +7,7 @@ const connectDB = async () => {
   try {
     const conn = await mongoose.connect(process.env.MONGO_URI);
   } catch (error) {
+    pino_logger.error(error.message);
     process.exit(1); // Exit process with failure
   }
 };

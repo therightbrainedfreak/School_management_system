@@ -1,8 +1,3 @@
-// This project is possible with the help of different resources that helped me to learn.
-// Special thanks to Shreyandcodingschool, codewithharry and apnacollege for providing free courses.
-// Thanks to Gemini, Claude and ChatGpt for helping me build this project.
-
-
 // *imports
 
 import 'dotenv/config';
@@ -16,7 +11,7 @@ import { globalLimiter } from './src/middlewares/rateLimiter.js';
 import cors from 'cors';
 import pino_logger from './src/utils/pino.js';
 import helmet from 'helmet';
-import { initCalenderGenerator } from './src/config/masterCalenderGenerator.js';
+import { init } from './src/config/masterCalenderConfig.js';
 
 // *route imports
 
@@ -77,19 +72,16 @@ app.use(helmet());
 
 async function bootstrap() {
   await connectDB();
-  initCalenderGenerator(process.env.RESET_CALENDAR === 'true');
+  await init();
 
   cron.schedule('0 6 * * *', () => generateTimePeriod(), { scheduled: true });
+  cron.schedule('5 0 * * *', () => { init(); });
 
   // *routes
 
   app.get('/', (req, res) => {
     res.json({
-      message: 'Welcome to school management system.',
-      metadata: {
-        api: process.env.API_VERSION,
-        node: process.version,
-      }
+      message: 'Welcome to school management system.'
     });
   });
 
